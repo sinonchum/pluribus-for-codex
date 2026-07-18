@@ -315,13 +315,13 @@ def test_phase_worker_failure_and_timeout_are_failed(
 
 
 @pytest.mark.parametrize("role", [WorkerRole.TESTER, WorkerRole.BUILDER])
-def test_assembly_conflict_is_failed(role: WorkerRole) -> None:
+def test_assembly_conflict_requires_human_review(role: WorkerRole) -> None:
     harness = Harness()
     harness.git.conflict_role = role
 
     result = run(harness)
 
-    assert result["status"] == "failed"
+    assert result["status"] == "requires_human_review"
     assert result["failure_reason"] == f"assembly_conflict:{role.value}"
 
 
@@ -342,14 +342,28 @@ def test_reviewer_escalation_requires_human_review_without_final_verification() 
 
 
 @pytest.mark.parametrize("scope", [VerificationScope.FOCUSED, VerificationScope.FINAL])
-def test_verification_failure_is_partially_verified(scope: VerificationScope) -> None:
+def test_required_verification_failure_is_failed(scope: VerificationScope) -> None:
     harness = Harness()
     harness.verification.statuses[scope] = VerificationStatus.FAILED
 
     result = run(harness)
 
-    assert result["status"] == "partially_verified"
+    assert result["status"] == "failed"
+    assert result["failure_reason"] == f"{scope.value}_verification_failed"
     assert len(harness.reports.requests) == 1
+
+
+@pytest.mark.parametrize("scope", [VerificationScope.FOCUSED, VerificationScope.FINAL])
+def test_optional_verification_failure_is_partially_verified(
+    scope: VerificationScope,
+) -> None:
+    harness = Harness()
+    harness.verification.statuses[scope] = VerificationStatus.PARTIALLY_VERIFIED
+
+    result = run(harness)
+
+    assert result["status"] == "partially_verified"
+    assert result["failure_reason"] is None
 
 
 @pytest.mark.parametrize("scope", [VerificationScope.FOCUSED, VerificationScope.FINAL])

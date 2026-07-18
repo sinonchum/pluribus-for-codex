@@ -194,6 +194,8 @@ class MissionController:
             context.focused = await self._verify(context, VerificationScope.FOCUSED)
             if context.focused.status is VerificationStatus.TIMED_OUT:
                 raise _MissionFailure("focused_verification_timeout")
+            if context.focused.status is VerificationStatus.FAILED:
+                raise _MissionFailure("focused_verification_failed")
 
             await self._transition(context, MissionState.REVIEWING)
             reviewer = await self._run_worker(context, WorkerRole.REVIEWER, scout.notes)
@@ -217,6 +219,8 @@ class MissionController:
             context.final = await self._verify(context, VerificationScope.FINAL)
             if context.final.status is VerificationStatus.TIMED_OUT:
                 raise _MissionFailure("final_verification_timeout")
+            if context.final.status is VerificationStatus.FAILED:
+                raise _MissionFailure("final_verification_failed")
             outcome = (
                 MissionState.VERIFIED
                 if context.focused.status is VerificationStatus.PASSED
@@ -226,7 +230,9 @@ class MissionController:
             return await self._finish(context, outcome)
         except AssemblyConflictError as error:
             return await self._finish(
-                context, MissionState.FAILED, f"assembly_conflict:{error}"
+                context,
+                MissionState.REQUIRES_HUMAN_REVIEW,
+                f"assembly_conflict:{error}",
             )
         except TimeoutError:
             return await self._finish(

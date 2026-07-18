@@ -122,6 +122,7 @@ class VerificationScope(StrEnum):
 
 class VerificationStatus(StrEnum):
     PASSED = "passed"
+    PARTIALLY_VERIFIED = "partially_verified"
     FAILED = "failed"
     TIMED_OUT = "timed_out"
 
