@@ -80,6 +80,19 @@ def test_health_endpoint_reports_ready(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_local_frontend_cors_preflight_is_allowed(client: TestClient) -> None:
+    response = client.options(
+        "/api/missions",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
 def test_create_and_get_mission_persists_repository_baseline(
     client: TestClient, clean_repo: Path
 ) -> None:

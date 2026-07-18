@@ -13,8 +13,7 @@ The launcher creates a fresh Git repository at the OS temporary directory, commi
 ## Live backend
 
 ```bash
-set VITE_API_BASE_URL=http://127.0.0.1:8000
-node demo/start-demo.mjs --mode live
+VITE_API_BASE_URL=http://127.0.0.1:8000 node demo/start-demo.mjs --mode live
 ```
 
 The seed intentionally contains an existing `HealthService`, version utility, authentication middleware, and a basic health test, but no `/health/details` route. It contains no credentials and has zero runtime dependencies.

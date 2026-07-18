@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.missions import router as missions_router
 from app.db import Database
@@ -21,6 +22,12 @@ def create_app(
     database.initialize()
 
     application = FastAPI(title="Pluribus for Codex API", version="0.1.0")
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Last-Event-ID"],
+    )
     application.state.database = database
     application.state.mission_controller = mission_controller
     application.include_router(missions_router)
