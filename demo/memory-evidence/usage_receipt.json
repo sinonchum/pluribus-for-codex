@@ -1,0 +1,21 @@
+{
+  "id": "use_demo_001",
+  "memory_id": "mem_pytest_importlib_v1",
+  "consumer": "dev_bob",
+  "matched_trigger": "import file mismatch",
+  "injected_into_codex": true,
+  "codex_reported_use": true,
+  "effect": "Configured pytest importlib collection mode.",
+  "changed_files": [
+    "pyproject.toml"
+  ],
+  "verification": {
+    "command": [
+      "pytest",
+      "-q"
+    ],
+    "exit_code": 0,
+    "output_excerpt": "2 passed"
+  },
+  "created_at": "2026-07-18T10:08:00Z"
+}
