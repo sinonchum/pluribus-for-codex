@@ -52,7 +52,12 @@ def test_replay_validation_rejects_blank_required_proof() -> None:
     snapshot = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
 
     for field_path in (
+        ("latest_receipt", "id"),
+        ("latest_receipt", "memory_id"),
+        ("latest_receipt", "consumer"),
         ("latest_receipt", "matched_trigger"),
+        ("latest_receipt", "effect"),
+        ("latest_receipt", "created_at"),
         ("latest_receipt", "verification", "output_excerpt"),
     ):
         invalid = copy.deepcopy(snapshot)
@@ -62,6 +67,32 @@ def test_replay_validation_rejects_blank_required_proof() -> None:
         target[field_path[-1]] = "   "
         with pytest.raises(ValueError, match="required proof"):
             runner._validate_snapshot(invalid)
+
+
+@pytest.mark.parametrize(
+    ("field_path", "invalid_value"),
+    [
+        (("latest_receipt", "id"), 123),
+        (("latest_receipt", "memory_id"), ["mem_pytest_importlib_v1"]),
+        (("latest_receipt", "consumer"), None),
+        (("latest_receipt", "effect"), True),
+        (("latest_receipt", "created_at"), 0),
+        (("latest_receipt", "verification", "exit_code"), False),
+        (("latest_receipt", "verification", "output_excerpt"), 2),
+    ],
+)
+def test_replay_validation_rejects_wrong_runtime_types(
+    field_path: tuple[str, ...], invalid_value: object
+) -> None:
+    runner = _load_runner_module()
+    invalid = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    target = invalid
+    for key in field_path[:-1]:
+        target = target[key]
+    target[field_path[-1]] = invalid_value
+
+    with pytest.raises(ValueError, match="frozen|required proof"):
+        runner._validate_snapshot(invalid)
 
 
 def test_live_mode_runs_direct_adapter_and_emits_verified_receipt(
