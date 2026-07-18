@@ -127,9 +127,7 @@ class FakeGit:
         self.deadlines: list[datetime] = []
         self.conflict_role: WorkerRole | None = None
 
-    async def validate_baseline(
-        self, mission: Mission, *, deadline: datetime
-    ) -> None:
+    async def validate_baseline(self, mission: Mission, *, deadline: datetime) -> None:
         self.deadlines.append(deadline)
         await self.gate.wait("baseline.validate")
 
@@ -343,9 +341,7 @@ def test_reviewer_escalation_requires_human_review_without_final_verification() 
     ]
 
 
-@pytest.mark.parametrize(
-    "scope", [VerificationScope.FOCUSED, VerificationScope.FINAL]
-)
+@pytest.mark.parametrize("scope", [VerificationScope.FOCUSED, VerificationScope.FINAL])
 def test_verification_failure_is_partially_verified(scope: VerificationScope) -> None:
     harness = Harness()
     harness.verification.statuses[scope] = VerificationStatus.FAILED
@@ -356,9 +352,7 @@ def test_verification_failure_is_partially_verified(scope: VerificationScope) ->
     assert len(harness.reports.requests) == 1
 
 
-@pytest.mark.parametrize(
-    "scope", [VerificationScope.FOCUSED, VerificationScope.FINAL]
-)
+@pytest.mark.parametrize("scope", [VerificationScope.FOCUSED, VerificationScope.FINAL])
 def test_verification_timeout_is_failed(scope: VerificationScope) -> None:
     harness = Harness()
     harness.verification.statuses[scope] = VerificationStatus.TIMED_OUT

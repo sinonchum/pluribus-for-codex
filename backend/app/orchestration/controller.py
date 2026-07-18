@@ -268,9 +268,7 @@ class MissionController:
             except TimeoutError as error:
                 raise _MissionFailure(f"worker_timeout:{role.value}") from error
 
-    async def _apply(
-        self, context: _RunContext, artifact: Artifact | None
-    ) -> None:
+    async def _apply(self, context: _RunContext, artifact: Artifact | None) -> None:
         if artifact is None:  # guarded by _require_worker_success
             raise _MissionFailure("worker_missing_artifact")
         context.candidate_commit = await self._action(
@@ -362,9 +360,7 @@ class MissionController:
             failure_reason="cancelled",
         )
 
-    async def _transition(
-        self, context: _RunContext, target: MissionState
-    ) -> None:
+    async def _transition(self, context: _RunContext, target: MissionState) -> None:
         allowed = STATE_TRANSITIONS[context.state]
         if target not in allowed:
             raise InvalidStateTransitionError(
