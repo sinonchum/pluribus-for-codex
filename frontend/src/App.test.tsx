@@ -21,8 +21,23 @@ describe("Mission Control", () => {
   it("shows causal knowledge use separately from delivery", async () => {
     render(<App />);
     await userEvent.click(screen.getByRole("button", { name: "Open recorded replay" }));
+    await userEvent.click(screen.getByRole("button", { name: /share knowledge/i }));
     expect(screen.getByText("causal use recorded")).toBeInTheDocument();
     expect(screen.getAllByText(/Consumed ✓ builder_1/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Delivered →/).length).toBeGreaterThan(0);
+  });
+
+  it("turns the replay into a three-step demo story", async () => {
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Open recorded replay" }));
+
+    expect(screen.getByRole("heading", { name: "4 Codex agents. One verified result." })).toBeInTheDocument();
+    expect(screen.getByText("Parallel work, one coordinated outcome")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /share knowledge/i }));
+    expect(screen.getByText("Knowledge became a code change")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /verify independently/i }));
+    expect(screen.getByText("Coordinator verified the result itself")).toBeInTheDocument();
   });
 });
