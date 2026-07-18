@@ -1,4 +1,4 @@
-from backend.app.adapters.codex import CodexConfig
+from app.adapters.codex import CodexConfig
 
 
 def test_config_supports_constructor_and_environment(monkeypatch):

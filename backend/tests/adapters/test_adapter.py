@@ -1,16 +1,16 @@
 import asyncio
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
 
-from backend.app.adapters.codex import (
+from app.adapters.codex import (
     AgentRunRequest,
     CodexAdapter,
     CodexConfig,
     CodexRunResult,
     parse_handoff,
 )
-from backend.app.hive import FilesystemEvidenceResolver, HiveService
-from backend.app.prompts import AgentRole
+from app.hive import FilesystemEvidenceResolver, HiveService
+from app.prompts import AgentRole
 
 
 class FakeRunner:
@@ -25,7 +25,7 @@ class FakeRunner:
 
 def process_result(stdout, *, exit_code=0, timed_out=False):
     parsed = parse_handoff(stdout)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return CodexRunResult(
         command=("codex", "exec", "-"),
         working_directory="/repo",

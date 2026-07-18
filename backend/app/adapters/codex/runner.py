@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import time
+from datetime import UTC, datetime
 
 from .config import CodexConfig
 from .models import CodexRunRequest, CodexRunResult
@@ -57,7 +57,7 @@ class CodexRunner:
         if not working_directory.is_dir():
             raise ValueError(f"Working directory does not exist: {working_directory}")
         command = (self._config.executable, *build_agent_args(request))
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         started = time.monotonic()
         stdout_bytes = b""
         stderr_bytes = b""
@@ -108,7 +108,7 @@ class CodexRunner:
             stderr_bytes, self._config.max_stderr_bytes
         )
         parsed = parse_handoff(stdout)
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
         return CodexRunResult(
             command=command,
             working_directory=str(working_directory),

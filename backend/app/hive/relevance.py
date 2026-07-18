@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from fnmatch import fnmatch
-import re
 
-from backend.app.adapters.codex.models import KnowledgePatchType
-from backend.app.prompts.models import AgentRole
+from app.adapters.codex.models import KnowledgePatchType
+from app.prompts.models import AgentRole
 
 from .models import ContextPacketRequest, KnowledgePatch, KnowledgeStatus
 
@@ -89,9 +89,13 @@ def rank_patches(request: ContextPacketRequest) -> tuple[RankedPatch, ...]:
         patch
         for patch in request.patches
         if patch.status is not KnowledgeStatus.REJECTED
-        and (request.include_superseded or patch.status is not KnowledgeStatus.SUPERSEDED)
+        and (
+            request.include_superseded or patch.status is not KnowledgeStatus.SUPERSEDED
+        )
     )
-    ranked = tuple(RankedPatch(patch, score_patch(patch, request)) for patch in eligible)
+    ranked = tuple(
+        RankedPatch(patch, score_patch(patch, request)) for patch in eligible
+    )
     return tuple(
         sorted(
             ranked,
@@ -113,8 +117,6 @@ def is_mandatory(patch: KnowledgePatch, role: AgentRole) -> bool:
         KnowledgeStatus.EXECUTION_VERIFIED,
     ):
         return True
-    if patch.type is KnowledgePatchType.RISK and (
+    return patch.type is KnowledgePatchType.RISK and (
         role.value in patch.relevant_to or not patch.relevant_to
-    ):
-        return True
-    return False
+    )

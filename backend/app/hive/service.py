@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
-from backend.app.adapters.codex.models import KnowledgePatchInput
+from app.adapters.codex.models import KnowledgePatchInput
 
 from .models import KnowledgePatch, KnowledgeStatus, ValidatedKnowledgePatch
-from .validation import EvidenceResolver, validate_knowledge_patch, with_validation_status
+from .validation import (
+    EvidenceResolver,
+    validate_knowledge_patch,
+    with_validation_status,
+)
 
 
 class HiveService:
@@ -63,4 +67,6 @@ class HiveService:
             self._resolver,
             source_linking_requested=source_linking_requested,
         )
-        return ValidatedKnowledgePatch(with_validation_status(patch, validation), validation)
+        return ValidatedKnowledgePatch(
+            with_validation_status(patch, validation), validation
+        )

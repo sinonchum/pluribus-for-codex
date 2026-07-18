@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 import shutil
 import time
+from collections.abc import Callable
 
 from .config import CodexConfig
 from .models import CodexPreflightResult
@@ -119,7 +119,9 @@ async def run_preflight(
     stderr = _decode(stderr_bytes)
     if process.returncode != 0:
         lowered = stderr.lower()
-        authentication = "auth" in lowered or "login" in lowered or "credential" in lowered
+        authentication = (
+            "auth" in lowered or "login" in lowered or "credential" in lowered
+        )
         packaged_binary_missing = "enoent" in lowered and "spawn" in lowered
         return _failure(
             executable=executable,

@@ -1,6 +1,6 @@
 import pytest
 
-from backend.app.prompts import AgentRole, PromptKnowledge, PromptRequest, render_prompt
+from app.prompts import AgentRole, PromptKnowledge, PromptRequest, render_prompt
 
 
 def prompt_request(role):
@@ -60,6 +60,8 @@ def test_all_role_prompts_are_deterministic_and_structured(role):
 def test_builder_receives_explicit_causal_consumption_rules():
     rendered = render_prompt(prompt_request(AgentRole.BUILDER))
     assert "merely because it was delivered" in rendered
-    assert "Every knowledge_usage.patch_id must appear in consumed_patch_ids" in rendered
+    assert (
+        "Every knowledge_usage.patch_id must appear in consumed_patch_ids" in rendered
+    )
     assert "src/health.py" in rendered
     assert "src/auth/**" in rendered

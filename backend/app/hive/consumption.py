@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Collection
 from dataclasses import dataclass
 
-from backend.app.adapters.codex.models import AgentHandoff
-from backend.app.prompts.models import AgentRole
+from app.adapters.codex.models import AgentHandoff
+from app.prompts.models import AgentRole
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +65,9 @@ class KnowledgeConsumptionTracker:
         errors: list[str] = []
         warnings: list[str] = []
         if unknown:
-            errors.append("Consumed patch IDs were not delivered: " + ", ".join(unknown))
+            errors.append(
+                "Consumed patch IDs were not delivered: " + ", ".join(unknown)
+            )
         if usage_without_flag:
             errors.append(
                 "knowledge_usage IDs are missing consumed flags: "
@@ -73,7 +75,8 @@ class KnowledgeConsumptionTracker:
             )
         if consumed_without_usage:
             errors.append(
-                "Consumed patch IDs lack causal usage: " + ", ".join(consumed_without_usage)
+                "Consumed patch IDs lack causal usage: "
+                + ", ".join(consumed_without_usage)
             )
         if duplicate_usage:
             warnings.append(
@@ -86,14 +89,22 @@ class KnowledgeConsumptionTracker:
             if usage is None or patch_id not in delivered:
                 continue
             if not usage.effect.strip():
-                errors.append(f"Knowledge usage for {patch_id} has no causal explanation.")
+                errors.append(
+                    f"Knowledge usage for {patch_id} has no causal explanation."
+                )
                 continue
-            if role is AgentRole.BUILDER and handoff.changed_files and not usage.changed_files:
+            if (
+                role is AgentRole.BUILDER
+                and handoff.changed_files
+                and not usage.changed_files
+            ):
                 warnings.append(
                     f"Builder usage for {patch_id} does not name an affected changed file."
                 )
             unrelated_files = tuple(
-                path for path in usage.changed_files if path not in handoff.changed_files
+                path
+                for path in usage.changed_files
+                if path not in handoff.changed_files
             )
             if unrelated_files:
                 warnings.append(

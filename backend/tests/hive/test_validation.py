@@ -1,8 +1,8 @@
 import asyncio
 from dataclasses import replace
 
-from backend.app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
-from backend.app.hive import (
+from app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
+from app.hive import (
     FilesystemEvidenceResolver,
     KnowledgePatch,
     KnowledgeStatus,
@@ -18,7 +18,9 @@ def patch(**overrides):
         type=KnowledgePatchType.REPOSITORY_FACT,
         summary="Service exists.",
         details="It is reused.",
-        evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "src/service.py", 1, 2),),
+        evidence=(
+            EvidenceReference(EvidenceType.FILE_REFERENCE, "src/service.py", 1, 2),
+        ),
         tags=("service",),
         relevant_to=("builder",),
         confidence=0.9,
@@ -57,10 +59,12 @@ def test_missing_file_and_invalid_line_range_remain_proposed(tmp_path):
 
 def test_rejects_unsafe_and_unsupported_evidence(tmp_path):
     absolute = replace(
-        patch(), evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "/etc/passwd", 1, 1),)
+        patch(),
+        evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "/etc/passwd", 1, 1),),
     )
     traversal = replace(
-        patch(), evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "../x", 1, 1),)
+        patch(),
+        evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "../x", 1, 1),),
     )
     unsupported = replace(
         patch(), evidence=(EvidenceReference("command", "src/service.py", 1, 1),)

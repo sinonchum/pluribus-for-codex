@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Iterable
+from collections.abc import Iterable
 
 from .models import AgentHandoff, HandoffParseResult
 
@@ -84,7 +84,9 @@ def _parse_candidate(raw_output: str, payload: str, method: str) -> HandoffParse
     )
 
 
-def _ambiguous(raw_output: str, candidates: Iterable[str], method: str) -> HandoffParseResult:
+def _ambiguous(
+    raw_output: str, candidates: Iterable[str], method: str
+) -> HandoffParseResult:
     count = len(tuple(candidates))
     return HandoffParseResult(
         handoff=None,

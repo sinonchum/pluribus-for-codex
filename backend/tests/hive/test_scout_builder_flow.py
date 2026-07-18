@@ -1,8 +1,8 @@
 import asyncio
 import json
 
-from backend.app.adapters.codex import parse_handoff
-from backend.app.hive import (
+from app.adapters.codex import parse_handoff
+from app.hive import (
     ContextPacketRequest,
     FilesystemEvidenceResolver,
     HiveService,
@@ -11,7 +11,7 @@ from backend.app.hive import (
     compile_context_packet,
     packet_prompt_knowledge,
 )
-from backend.app.prompts import AgentRole, PromptRequest, render_prompt
+from app.prompts import AgentRole, PromptRequest, render_prompt
 
 
 def marked(payload):

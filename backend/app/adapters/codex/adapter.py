@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from backend.app.hive.consumption import (
+from app.hive.consumption import (
     ConsumptionValidationResult,
     KnowledgeConsumptionTracker,
 )
-from backend.app.hive.models import ValidatedKnowledgePatch
-from backend.app.hive.service import HiveService
-from backend.app.prompts.models import AgentRole
+from app.hive.models import ValidatedKnowledgePatch
+from app.hive.service import HiveService
+from app.prompts.models import AgentRole
 
 from .config import CodexConfig
 from .models import AgentHandoff, CodexPreflightResult, CodexRunRequest, CodexRunResult
@@ -105,7 +105,8 @@ class CodexAdapter:
                     agent_id=request.agent_id,
                     repository_path=request.working_directory,
                     baseline_commit=request.baseline_commit,
-                    source_linking_requested=not result.timed_out and not result.cancelled,
+                    source_linking_requested=not result.timed_out
+                    and not result.cancelled,
                 )
                 validated.append(item)
                 errors.extend(item.validation.errors)

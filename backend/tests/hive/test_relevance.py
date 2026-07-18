@@ -1,11 +1,11 @@
-from backend.app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
-from backend.app.hive import (
+from app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
+from app.hive import (
     ContextPacketRequest,
     KnowledgePatch,
     KnowledgeStatus,
     rank_patches,
 )
-from backend.app.prompts import AgentRole
+from app.prompts import AgentRole
 
 
 def patch(patch_id, status, *, relevant_to=("builder",), confidence=0.8):
@@ -16,7 +16,9 @@ def patch(patch_id, status, *, relevant_to=("builder",), confidence=0.8):
         type=KnowledgePatchType.REPOSITORY_FACT,
         summary="Reuse health service",
         details="Health implementation dependency",
-        evidence=(EvidenceReference(EvidenceType.FILE_REFERENCE, "src/health.py", 1, 2),),
+        evidence=(
+            EvidenceReference(EvidenceType.FILE_REFERENCE, "src/health.py", 1, 2),
+        ),
         tags=("health",),
         relevant_to=relevant_to,
         confidence=confidence,

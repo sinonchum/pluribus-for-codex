@@ -1,6 +1,6 @@
 import json
 
-from backend.app.adapters.codex import parse_handoff
+from app.adapters.codex import parse_handoff
 
 
 def valid_payload(**overrides):
@@ -25,7 +25,11 @@ def valid_payload(**overrides):
 
 
 def test_parses_marker_delimited_handoff_and_preserves_raw_output():
-    raw = "prose\n<PLURIBUS_HANDOFF>\n" + json.dumps(valid_payload()) + "\n</PLURIBUS_HANDOFF>"
+    raw = (
+        "prose\n<PLURIBUS_HANDOFF>\n"
+        + json.dumps(valid_payload())
+        + "\n</PLURIBUS_HANDOFF>"
+    )
 
     result = parse_handoff(raw)
 
@@ -133,7 +137,11 @@ def test_missing_fields_unknown_enum_absolute_path_and_bad_patch_id_are_clear():
 def test_duplicate_consumed_patch_ids_are_removed_in_first_seen_order():
     result = parse_handoff(
         "<PLURIBUS_HANDOFF>"
-        + json.dumps(valid_payload(consumed_patch_ids=["kp_1", "KP_1", "kp_2"], knowledge_usage=[]))
+        + json.dumps(
+            valid_payload(
+                consumed_patch_ids=["kp_1", "KP_1", "kp_2"], knowledge_usage=[]
+            )
+        )
         + "</PLURIBUS_HANDOFF>"
     )
     assert result.parsed

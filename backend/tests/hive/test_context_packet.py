@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from backend.app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
-from backend.app.hive import (
+from app.adapters.codex import EvidenceReference, EvidenceType, KnowledgePatchType
+from app.hive import (
     ContextPacketRequest,
     KnowledgePatch,
     KnowledgeStatus,
     compile_context_packet,
 )
-from backend.app.prompts import AgentRole
+from app.prompts import AgentRole
 
 
 def patch(patch_id, patch_type, status, relevant_to=("builder",)):
@@ -45,19 +45,32 @@ def request(patches, role=AgentRole.BUILDER, max_patches=2):
 
 
 def test_active_constraints_mandatory_patch_and_delivery_ids_are_recorded():
-    constraint = patch("kp_constraint", KnowledgePatchType.CONSTRAINT, KnowledgeStatus.PROPOSED, ())
-    fact = patch("kp_fact", KnowledgePatchType.REPOSITORY_FACT, KnowledgeStatus.SOURCE_LINKED)
+    constraint = patch(
+        "kp_constraint", KnowledgePatchType.CONSTRAINT, KnowledgeStatus.PROPOSED, ()
+    )
+    fact = patch(
+        "kp_fact", KnowledgePatchType.REPOSITORY_FACT, KnowledgeStatus.SOURCE_LINKED
+    )
     packet = compile_context_packet(request((fact, constraint), max_patches=1))
     assert "No dependencies" in packet.rendered_text
     assert "kp_constraint" in packet.delivered_patch_ids
-    assert "source-linked; the interpretation is not independently verified" not in packet.rendered_text
+    assert (
+        "source-linked; the interpretation is not independently verified"
+        not in packet.rendered_text
+    )
 
 
 def test_source_linked_and_disputed_are_labeled_and_rejected_excluded():
-    linked = patch("kp_linked", KnowledgePatchType.REPOSITORY_FACT, KnowledgeStatus.SOURCE_LINKED)
+    linked = patch(
+        "kp_linked", KnowledgePatchType.REPOSITORY_FACT, KnowledgeStatus.SOURCE_LINKED
+    )
     disputed = patch("kp_disputed", KnowledgePatchType.RISK, KnowledgeStatus.DISPUTED)
-    rejected = patch("kp_rejected", KnowledgePatchType.TEST_RESULT, KnowledgeStatus.REJECTED)
-    packet = compile_context_packet(request((disputed, rejected, linked), max_patches=3))
+    rejected = patch(
+        "kp_rejected", KnowledgePatchType.TEST_RESULT, KnowledgeStatus.REJECTED
+    )
+    packet = compile_context_packet(
+        request((disputed, rejected, linked), max_patches=3)
+    )
     assert "[source_linked] kp_linked" in packet.rendered_text
     assert "not independently verified" in packet.rendered_text
     assert "[disputed] kp_disputed" in packet.rendered_text
@@ -66,8 +79,15 @@ def test_source_linked_and_disputed_are_labeled_and_rejected_excluded():
 
 
 def test_reviewer_receives_risk_and_test_result_deterministically():
-    risk = patch("kp_risk", KnowledgePatchType.RISK, KnowledgeStatus.SOURCE_LINKED, ("reviewer",))
-    test = patch("kp_test", KnowledgePatchType.TEST_RESULT, KnowledgeStatus.EXECUTION_VERIFIED, ("reviewer",))
+    risk = patch(
+        "kp_risk", KnowledgePatchType.RISK, KnowledgeStatus.SOURCE_LINKED, ("reviewer",)
+    )
+    test = patch(
+        "kp_test",
+        KnowledgePatchType.TEST_RESULT,
+        KnowledgeStatus.EXECUTION_VERIFIED,
+        ("reviewer",),
+    )
     first = compile_context_packet(request((test, risk), AgentRole.REVIEWER))
     second = compile_context_packet(request((test, risk), AgentRole.REVIEWER))
     assert first == second

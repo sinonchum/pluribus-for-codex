@@ -1,6 +1,6 @@
-from backend.app.adapters.codex import AgentHandoff, AgentStatus, KnowledgeUsage
-from backend.app.hive import KnowledgeConsumptionTracker
-from backend.app.prompts import AgentRole
+from app.adapters.codex import AgentHandoff, AgentStatus, KnowledgeUsage
+from app.hive import KnowledgeConsumptionTracker
+from app.prompts import AgentRole
 
 
 def handoff(consumed=(), usage=(), changed_files=("src/a.py",)):

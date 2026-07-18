@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Protocol
 
-from backend.app.adapters.codex.models import EvidenceType, validate_relative_path
+from app.adapters.codex.models import EvidenceType, validate_relative_path
 
 from .models import KnowledgePatch, KnowledgeStatus, KnowledgeValidationResult
 
@@ -62,20 +62,29 @@ async def validate_knowledge_patch(
     errors: list[str] = []
     warnings: list[str] = []
     resulting_status = patch.status
-    if patch.status is KnowledgeStatus.EXECUTION_VERIFIED and not coordinator_execution_verified:
+    if (
+        patch.status is KnowledgeStatus.EXECUTION_VERIFIED
+        and not coordinator_execution_verified
+    ):
         errors.append("Agent output cannot mark a patch execution_verified.")
         resulting_status = KnowledgeStatus.PROPOSED
     if patch.status in (KnowledgeStatus.REJECTED, KnowledgeStatus.SUPERSEDED):
         if source_linking_requested:
             errors.append(f"Cannot source-link a {patch.status.value} patch.")
-        return KnowledgeValidationResult(False, patch.status, tuple(errors), tuple(warnings))
+        return KnowledgeValidationResult(
+            False, patch.status, tuple(errors), tuple(warnings)
+        )
     if not source_linking_requested:
-        return KnowledgeValidationResult(not errors, resulting_status, tuple(errors), tuple(warnings))
+        return KnowledgeValidationResult(
+            not errors, resulting_status, tuple(errors), tuple(warnings)
+        )
     if not patch.baseline_commit:
         errors.append("baseline_commit is required for source-linked evidence.")
     if not patch.evidence:
         warnings.append("Patch has no file evidence and remains proposed.")
-        return KnowledgeValidationResult(not errors, KnowledgeStatus.PROPOSED, tuple(errors), tuple(warnings))
+        return KnowledgeValidationResult(
+            not errors, KnowledgeStatus.PROPOSED, tuple(errors), tuple(warnings)
+        )
 
     for index, evidence in enumerate(patch.evidence):
         prefix = f"evidence[{index}]"
@@ -95,13 +104,17 @@ async def validate_knowledge_patch(
         if not await resolver.file_exists_at_baseline(
             repository_path, patch.baseline_commit, relative_path
         ):
-            errors.append(f"{prefix} file does not exist at the recorded baseline: {relative_path}.")
+            errors.append(
+                f"{prefix} file does not exist at the recorded baseline: {relative_path}."
+            )
             continue
         content = await resolver.read_file_at_baseline(
             repository_path, patch.baseline_commit, relative_path
         )
         if content is None:
-            errors.append(f"{prefix} file could not be read at the recorded baseline: {relative_path}.")
+            errors.append(
+                f"{prefix} file could not be read at the recorded baseline: {relative_path}."
+            )
             continue
         line_count = len(content.splitlines())
         if evidence.line_end > line_count:
@@ -110,14 +123,24 @@ async def validate_knowledge_patch(
             )
 
     if errors:
-        return KnowledgeValidationResult(False, KnowledgeStatus.PROPOSED, tuple(errors), tuple(warnings))
+        return KnowledgeValidationResult(
+            False, KnowledgeStatus.PROPOSED, tuple(errors), tuple(warnings)
+        )
     if patch.status is KnowledgeStatus.DISPUTED:
-        warnings.append("Evidence is valid, but a disputed patch is not promoted automatically.")
-        return KnowledgeValidationResult(True, KnowledgeStatus.DISPUTED, (), tuple(warnings))
+        warnings.append(
+            "Evidence is valid, but a disputed patch is not promoted automatically."
+        )
+        return KnowledgeValidationResult(
+            True, KnowledgeStatus.DISPUTED, (), tuple(warnings)
+        )
     if coordinator_execution_verified:
-        return KnowledgeValidationResult(True, KnowledgeStatus.EXECUTION_VERIFIED, (), tuple(warnings))
+        return KnowledgeValidationResult(
+            True, KnowledgeStatus.EXECUTION_VERIFIED, (), tuple(warnings)
+        )
     # This links the claim to source; it does not certify the agent's interpretation.
-    return KnowledgeValidationResult(True, KnowledgeStatus.SOURCE_LINKED, (), tuple(warnings))
+    return KnowledgeValidationResult(
+        True, KnowledgeStatus.SOURCE_LINKED, (), tuple(warnings)
+    )
 
 
 def with_validation_status(

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path, PurePosixPath, PureWindowsPath
-import re
 from typing import Any
 
 
@@ -106,12 +106,18 @@ class EvidenceReference:
         path = validate_relative_path(data.get("path"), "evidence.path")
         line_start = data.get("line_start")
         line_end = data.get("line_end")
-        if isinstance(line_start, bool) or not isinstance(line_start, int) or line_start <= 0:
+        if (
+            isinstance(line_start, bool)
+            or not isinstance(line_start, int)
+            or line_start <= 0
+        ):
             raise ValueError("evidence.line_start must be a positive integer.")
         if isinstance(line_end, bool) or not isinstance(line_end, int) or line_end <= 0:
             raise ValueError("evidence.line_end must be a positive integer.")
         if line_end < line_start:
-            raise ValueError("evidence.line_end must be greater than or equal to line_start.")
+            raise ValueError(
+                "evidence.line_end must be greater than or equal to line_start."
+            )
         return cls(evidence_type, path, line_start, line_end)
 
 
@@ -132,7 +138,9 @@ class KnowledgePatchInput:
         try:
             patch_type = KnowledgePatchType(data.get("type"))
         except ValueError as exc:
-            raise ValueError(f"Unknown knowledge patch type: {data.get('type')!r}.") from exc
+            raise ValueError(
+                f"Unknown knowledge patch type: {data.get('type')!r}."
+            ) from exc
         confidence = data.get("confidence")
         if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
             raise ValueError("confidence must be a number between 0 and 1.")
@@ -166,8 +174,12 @@ class SelfReportedCommand:
             raise ValueError("Self-reported command must be an object.")
         command = _required_string(data, "command")
         exit_code = data.get("exit_code")
-        if exit_code is not None and (isinstance(exit_code, bool) or not isinstance(exit_code, int)):
-            raise ValueError("self_reported_commands.exit_code must be an integer or null.")
+        if exit_code is not None and (
+            isinstance(exit_code, bool) or not isinstance(exit_code, int)
+        ):
+            raise ValueError(
+                "self_reported_commands.exit_code must be an integer or null."
+            )
         return cls(command, exit_code)
 
 
@@ -210,7 +222,9 @@ class AgentHandoff:
         try:
             status = AgentStatus(data.get("status"))
         except ValueError as exc:
-            raise ValueError(f"Unknown handoff status: {data.get('status')!r}.") from exc
+            raise ValueError(
+                f"Unknown handoff status: {data.get('status')!r}."
+            ) from exc
         changed_files = tuple(
             validate_relative_path(path, "changed_files")
             for path in _string_tuple(data, "changed_files")
@@ -224,10 +238,14 @@ class AgentHandoff:
             raise ValueError("knowledge_patches and knowledge_usage must be arrays.")
         consumed = _string_tuple(data, "consumed_patch_ids")
         normalized_consumed = tuple(
-            dict.fromkeys(normalize_patch_id(item, "consumed_patch_ids") for item in consumed)
+            dict.fromkeys(
+                normalize_patch_id(item, "consumed_patch_ids") for item in consumed
+            )
         )
         usage = tuple(KnowledgeUsage.from_dict(item) for item in usage_data)
-        missing_flags = sorted({item.patch_id for item in usage} - set(normalized_consumed))
+        missing_flags = sorted(
+            {item.patch_id for item in usage} - set(normalized_consumed)
+        )
         if missing_flags:
             raise ValueError(
                 "knowledge_usage patch IDs must appear in consumed_patch_ids: "

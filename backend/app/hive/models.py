@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from backend.app.adapters.codex.models import (
+from app.adapters.codex.models import (
     EvidenceReference,
     KnowledgePatchType,
     normalize_patch_id,
 )
-from backend.app.prompts.models import AgentRole
+from app.prompts.models import AgentRole
 
 
 class KnowledgeStatus(str, Enum):
@@ -44,7 +44,9 @@ class KnowledgePatch:
         if normalized != self.id:
             raise ValueError("KnowledgePatch.id must already be normalized.")
         if not self.mission_id.strip() or not self.agent_id.strip():
-            raise ValueError("KnowledgePatch mission_id and agent_id must not be empty.")
+            raise ValueError(
+                "KnowledgePatch mission_id and agent_id must not be empty."
+            )
         if not self.summary.strip():
             raise ValueError("KnowledgePatch summary must not be empty.")
         if not 0 <= self.confidence <= 1:

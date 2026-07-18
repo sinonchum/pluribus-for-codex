@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from backend.app.adapters.codex import CodexConfig, CodexRunRequest, CodexRunner
-from backend.app.adapters.codex.runner import build_agent_args
+from app.adapters.codex import CodexConfig, CodexRunner, CodexRunRequest
+from app.adapters.codex.runner import build_agent_args
 
 
 class FakeProcess:
@@ -69,7 +69,9 @@ def test_runner_uses_exec_argument_array_and_captures_output(monkeypatch, tmp_pa
     assert result.duration_seconds >= 0
 
 
-def test_runner_enforces_timeout_and_preserves_partial_compatible_output(monkeypatch, tmp_path):
+def test_runner_enforces_timeout_and_preserves_partial_compatible_output(
+    monkeypatch, tmp_path
+):
     process = FakeProcess(b"partial", b"warning", delay=0.1)
 
     async def create(*args, **kwargs):
@@ -94,7 +96,9 @@ def test_runner_handles_cancellation_and_invalid_directory(monkeypatch, tmp_path
     async def cancel_run():
         monkeypatch.setattr(asyncio, "create_subprocess_exec", create)
         task = asyncio.create_task(
-            CodexRunner(CodexConfig(termination_grace_seconds=0.01)).run(request(tmp_path))
+            CodexRunner(CodexConfig(termination_grace_seconds=0.01)).run(
+                request(tmp_path)
+            )
         )
         await asyncio.sleep(0)
         task.cancel()
@@ -105,9 +109,7 @@ def test_runner_handles_cancellation_and_invalid_directory(monkeypatch, tmp_path
     assert process.terminated
 
     with pytest.raises(ValueError, match="does not exist"):
-        asyncio.run(
-            CodexRunner(CodexConfig()).run(request(tmp_path / "missing"))
-        )
+        asyncio.run(CodexRunner(CodexConfig()).run(request(tmp_path / "missing")))
 
 
 def test_output_is_bounded_and_invalid_utf8_is_replaced(monkeypatch, tmp_path):

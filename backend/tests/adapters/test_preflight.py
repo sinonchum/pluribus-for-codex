@@ -1,6 +1,6 @@
 import asyncio
 
-from backend.app.adapters.codex import CodexConfig, build_preflight_args, run_preflight
+from app.adapters.codex import CodexConfig, build_preflight_args, run_preflight
 
 
 class FakeProcess:
