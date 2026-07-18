@@ -48,16 +48,20 @@ def published_capsule(**overrides: object) -> dict[str, object]:
 def test_seeded_memory_is_searchable_by_query_tag_and_trigger(
     client: TestClient,
 ) -> None:
-    by_query = client.get("/api/memories", params={"query": "pytest"})
-    by_tag = client.get("/api/memories", params={"tag": "debugging"})
-    by_trigger = client.get(
-        "/api/memories", params={"query": "test_runner.py collision"}
-    )
+    by_query = client.get("/api/memories", params={"query": "billing"})
+    by_tag = client.get("/api/memories", params={"tag": "handoff"})
+    by_trigger = client.get("/api/memories", params={"query": "cancel an invoice"})
 
     assert by_query.status_code == 200
-    assert [memory["id"] for memory in by_query.json()] == ["mem_pytest_importlib_v1"]
-    assert [memory["id"] for memory in by_tag.json()] == ["mem_pytest_importlib_v1"]
-    assert [memory["id"] for memory in by_trigger.json()] == ["mem_pytest_importlib_v1"]
+    assert [memory["id"] for memory in by_query.json()] == [
+        "mem_billing_audit_handoff_v1"
+    ]
+    assert [memory["id"] for memory in by_tag.json()] == [
+        "mem_billing_audit_handoff_v1"
+    ]
+    assert [memory["id"] for memory in by_trigger.json()] == [
+        "mem_billing_audit_handoff_v1"
+    ]
 
 
 def test_search_treats_sql_wildcards_as_literal_text(client: TestClient) -> None:
@@ -72,9 +76,7 @@ def test_search_treats_sql_wildcards_as_literal_text(client: TestClient) -> None
     underscore_results = client.get("/api/memories", params={"query": "_"}).json()
 
     assert [memory["id"] for memory in percent_results] == ["mem_percent_v1"]
-    assert [memory["id"] for memory in underscore_results] == [
-        "mem_pytest_importlib_v1"
-    ]
+    assert underscore_results == []
 
 
 def test_seed_is_idempotent_across_application_restarts(tmp_path: Path) -> None:
@@ -90,16 +92,16 @@ def test_seed_is_idempotent_across_application_restarts(tmp_path: Path) -> None:
 
 
 def test_get_memory_returns_full_frozen_capsule(client: TestClient) -> None:
-    response = client.get("/api/memories/fix-pytest-module-collisions")
+    response = client.get("/api/memories/preserve-billing-audit-trail")
 
     assert response.status_code == 200
     body = response.json()
-    assert body["id"] == "mem_pytest_importlib_v1"
+    assert body["id"] == "mem_billing_audit_handoff_v1"
     assert body["verification"] == {
-        "command": ["pytest", "-q"],
+        "command": ["uv", "run", "pytest", "-q"],
         "exit_code": 0,
-        "passed": 4,
-        "evidence_excerpt": "4 passed",
+        "passed": 3,
+        "evidence_excerpt": "3 passed",
     }
     assert body["fork_of"] is None
 
@@ -123,42 +125,44 @@ def test_create_memory_persists_and_duplicate_slug_conflicts(
 
 
 def test_star_increments_once_for_fixed_demo_user(client: TestClient) -> None:
-    path = "/api/memories/fix-pytest-module-collisions/star"
+    path = "/api/memories/preserve-billing-audit-trail/star"
 
     first = client.post(path)
     second = client.post(path)
 
     assert first.status_code == 200
     assert first.json() == {
-        "memory_id": "mem_pytest_importlib_v1",
-        "slug": "fix-pytest-module-collisions",
+        "memory_id": "mem_billing_audit_handoff_v1",
+        "slug": "preserve-billing-audit-trail",
         "starred": True,
-        "stars": 129,
+        "stars": 48,
     }
     assert second.json() == first.json()
     assert (
-        client.get("/api/memories/fix-pytest-module-collisions").json()["stars"] == 129
+        client.get("/api/memories/preserve-billing-audit-trail").json()["stars"] == 48
     )
 
 
 def test_install_records_once_and_lists_installed_memory(client: TestClient) -> None:
-    path = "/api/memories/fix-pytest-module-collisions/install"
+    path = "/api/memories/preserve-billing-audit-trail/install"
 
     first = client.post(path)
     second = client.post(path)
     installed = client.get("/api/installed")
 
     assert first.status_code == 200
-    assert first.json()["memory_id"] == "mem_pytest_importlib_v1"
+    assert first.json()["memory_id"] == "mem_billing_audit_handoff_v1"
     assert first.json()["consumer"] == "dev_bob"
     assert second.json() == first.json()
     assert installed.status_code == 200
-    assert [memory["id"] for memory in installed.json()] == ["mem_pytest_importlib_v1"]
-    assert installed.json()[0]["installs"] == 1403
+    assert [memory["id"] for memory in installed.json()] == [
+        "mem_billing_audit_handoff_v1"
+    ]
+    assert installed.json()[0]["installs"] == 19
 
 
 def test_demo_snapshot_matches_frozen_aggregate_shape(client: TestClient) -> None:
-    client.post("/api/memories/fix-pytest-module-collisions/install")
+    client.post("/api/memories/preserve-billing-audit-trail/install")
 
     response = client.get("/api/demo/snapshot")
 
@@ -170,13 +174,13 @@ def test_demo_snapshot_matches_frozen_aggregate_shape(client: TestClient) -> Non
         "latest_receipt",
         "stats",
     }
-    assert body["featured_memories"][0]["id"] == "mem_pytest_importlib_v1"
-    assert body["installed_memories"][0]["id"] == "mem_pytest_importlib_v1"
+    assert body["featured_memories"][0]["id"] == "mem_billing_audit_handoff_v1"
+    assert body["installed_memories"][0]["id"] == "mem_billing_audit_handoff_v1"
     assert body["latest_receipt"] is None
     assert body["stats"] == {
         "published": 1,
         "verified": 1,
-        "installs": 1403,
+        "installs": 19,
         "successful_uses": 0,
     }
 

@@ -1,54 +1,60 @@
 # Pluribus for Codex
 
-**The open registry for reusable, verified Codex memories.**
+**Engineering knowledge handoff for Codex.**
 
-> GitHub for useful Codex memories.
+When an experienced engineer leaves, Git preserves the code but not the judgment behind it. Pluribus turns company-specific engineering decisions into sanitized, employee-approved Memory Capsules that a successor can install into Codex—and proves when that knowledge changed a real outcome.
 
-Pluribus lets developers publish debugging methods and coding best practices learned with Codex, discover memories created by others, install them into a local Pluribus-managed Codex memory pack, and preserve evidence that an installed memory was actually used and followed by successful verification.
+## Demo story
 
-## Core loop
+Alice maintained Northstar Billing for four years. Before leaving, she publishes one implicit rule:
 
-```text
-Publish → Discover → Install → Codex Uses → Verify
+> Never assign `invoice.status` directly. Every billing transition must use `transition_invoice()` so the append-only financial audit trail is recorded first.
+
+Bob inherits a task to add invoice cancellation. Pluribus matches Alice's handoff, injects it into a bounded real Codex CLI run, Codex changes only `billing/invoices.py`, and coordinator-run verification returns `3 passed`. A Usage Receipt links Alice, the installed memory, Bob, the code delta, and the test proof.
+
+## Real Terminal demo
+
+From the repository root:
+
+```bash
+uv run --project backend python demo/run-handoff-live.py
 ```
 
-A useful technique should not disappear inside one developer's Codex conversation. Pluribus turns it into a versioned Memory Capsule with explicit triggers, reusable steps, compatibility metadata, sanitized evidence, and usage receipts.
+To publish the resulting receipt into a running Live UI:
 
-## Fixed hackathon demo
-
-Developer A publishes a verified memory for fixing duplicate pytest module collisions with `--import-mode=importlib`. Developer B finds and installs it. Pluribus injects the matching memory into a bounded Codex task. The resulting repository change passes coordinator-run verification, and a receipt connects the publisher, memory, consumer, changed file, and test output.
-
-## Honest boundary
-
-Pluribus does not claim to mutate hidden Codex model memory. It manages explicit local memory packages and injects relevant installed memories into Codex task context through the Codex adapter.
-
-## Pivot documents
-
-- [Memory Registry scope and shared contract](docs/MEMORY_REGISTRY_SCOPE.md)
-- [Four-person execution plan](docs/TEAM_EXECUTION_PLAN_V2.md)
-
-The earlier mission-orchestration PRD and execution plan remain in the repository as historical hackathon work but are superseded by the documents above for the current build.
-
-## MVP technology
-
-- Python 3.11 + FastAPI
-- SQLite registry and usage-receipt store
-- Local Markdown memory packages with hashed manifests
-- Local Codex CLI adapter
-- Safe coordinator-run verification
-- React/Vite marketplace UI
-
-## Status
-
-Pivot scope frozen for the one-day hackathon MVP. The only required end-to-end story is:
-
-```text
-one developer publishes a verified memory
-→ another developer discovers and installs it
-→ Codex receives and uses it
-→ coordinator verification passes
+```bash
+uv run --project backend python demo/run-handoff-live.py \
+  --api-base http://127.0.0.1:8011
 ```
 
-## License
+The runner deliberately proves the failing baseline first, installs Alice's Memory Capsule locally, invokes the real `codex exec` CLI in `workspace-write` sandbox mode, runs `uv run pytest -q`, and retains the temporary workspace for inspection.
 
-MIT
+## Run Live API and UI
+
+Terminal 1:
+
+```bash
+cd backend
+PLURIBUS_DB_PATH=/tmp/pluribus-handoff.db \
+  uv run uvicorn app.main:app --host 127.0.0.1 --port 8011
+```
+
+Terminal 2:
+
+```bash
+cd frontend
+VITE_API_BASE_URL=http://127.0.0.1:8011 npm run dev -- --host 127.0.0.1 --port 5177
+```
+
+Open `http://127.0.0.1:5177/?mode=live`.
+
+## Trust boundary
+
+Pluribus does **not** upload raw Codex conversations. The intended publish flow is local extraction, secret removal, departing-employee review, private/team publication, explicit project installation, bounded prompt injection, and coordinator verification.
+
+## Quality gates
+
+```bash
+cd backend && uv run pytest -q
+cd frontend && npm test -- --run && npm run typecheck && npm run build && npm audit --audit-level=high
+```

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 REPLAY_LABEL = "REPLAY — RECORDED EVIDENCE"
-LIVE_LABEL = "LIVE — CODEX EVIDENCE"
+LIVE_LABEL = "LIVE — KNOWLEDGE HANDOFF"
 EVIDENCE_ROOT = Path(__file__).resolve().parent / "memory-evidence"
 SNAPSHOT_PATH = EVIDENCE_ROOT / "demo_snapshot.json"
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
@@ -52,14 +52,14 @@ def _validate_snapshot(snapshot: Any) -> dict[str, Any]:
         or not receipt["matched_trigger"].strip()
     ):
         raise ValueError("Replay receipt required proof is missing")
-    if receipt["changed_files"] != ["pyproject.toml"]:
-        raise ValueError("Replay receipt must identify pyproject.toml")
+    if receipt["changed_files"] != ["billing/invoices.py"]:
+        raise ValueError("Replay receipt must identify billing/invoices.py")
 
     verification = receipt["verification"]
     if not isinstance(verification, dict) or set(verification) != VERIFICATION_KEYS:
         raise ValueError("Replay verification does not match the frozen contract")
-    if verification["command"] != ["pytest", "-q"]:
-        raise ValueError("Replay verification command must be pytest -q")
+    if verification["command"] != ["uv", "run", "pytest", "-q"]:
+        raise ValueError("Replay verification command must be uv run pytest -q")
     if verification["exit_code"] != 0:
         raise ValueError("Replay verification must pass")
     if (
@@ -99,9 +99,9 @@ def _run_live(args: argparse.Namespace) -> int:
                 installed_memory_root=args.installed_memory_root,
                 workspace=args.workspace,
                 receipt_id=f"use_live_{uuid.uuid4().hex}",
-                consumer="demo_consumer",
+                consumer="Bob · Successor Engineer",
                 created_at=datetime.now(UTC),
-                verification_command=("pytest", "-q"),
+                verification_command=("uv", "run", "pytest", "-q"),
             )
         )
     except Exception:

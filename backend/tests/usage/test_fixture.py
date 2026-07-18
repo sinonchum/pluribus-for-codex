@@ -20,26 +20,47 @@ def _run_pytest(cwd: Path):
                 cwd=cwd,
                 timeout_seconds=30,
                 output_limit_bytes=16_384,
-                name="memory-fixture",
+                name="billing-handoff-fixture",
             )
         )
     )
 
 
-def test_fixture_reproduces_baseline_failure_and_passes_with_memory_method(
+def _apply_alice_memory(workspace: Path) -> None:
+    path = workspace / "billing" / "invoices.py"
+    source = path.read_text(encoding="utf-8")
+    source = source.replace(
+        '    PAID = "paid"\n',
+        '    PAID = "paid"\n    CANCELLED = "cancelled"\n',
+    )
+    source += """
+
+
+def cancel_invoice(invoice: Invoice, ledger: list[LedgerEvent]) -> None:
+    transition_invoice(
+        invoice,
+        to_status=InvoiceStatus.CANCELLED,
+        ledger=ledger,
+        reason="customer_request",
+    )
+"""
+    path.write_text(source, encoding="utf-8")
+
+
+def test_fixture_fails_before_handoff_and_passes_with_alice_memory(
     tmp_path: Path,
 ) -> None:
     assert FIXTURE_ROOT.is_dir(), "demo/memory-fixture is missing"
-    baseline = tmp_path / "baseline"
-    shutil.copytree(FIXTURE_ROOT, baseline)
-    (baseline / "pyproject.toml").unlink()
+    workspace = tmp_path / "billing-service"
+    shutil.copytree(FIXTURE_ROOT, workspace, ignore=shutil.ignore_patterns(".venv"))
 
-    failing = _run_pytest(baseline)
+    failing = _run_pytest(workspace)
     failing_output = f"{failing.stdout}\n{failing.stderr}".lower()
     assert failing.status is CommandStatus.FAILED
-    assert "import file mismatch" in failing_output
-    assert "test_runner.py" in failing_output
+    assert "cancel_invoice" in failing_output
 
-    passing = _run_pytest(FIXTURE_ROOT)
+    _apply_alice_memory(workspace)
+    passing = _run_pytest(workspace)
     assert passing.status is CommandStatus.PASSED
     assert passing.exit_code == 0
+    assert "3 passed" in passing.stdout

@@ -18,17 +18,17 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
 def receipt_payload(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "id": "use_live_cli_001",
-        "memory_id": "mem_pytest_importlib_v1",
-        "consumer": "demo_consumer",
-        "matched_trigger": "import file mismatch",
+        "memory_id": "mem_billing_audit_handoff_v1",
+        "consumer": "Bob · Successor Engineer",
+        "matched_trigger": "add a new invoice status",
         "injected_into_codex": True,
         "codex_reported_use": True,
-        "effect": "Configured pytest importlib mode with the installed memory.",
-        "changed_files": ["pyproject.toml"],
+        "effect": "Preserved the append-only billing audit trail.",
+        "changed_files": ["billing/invoices.py"],
         "verification": {
-            "command": ["pytest", "-q"],
+            "command": ["uv", "run", "pytest", "-q"],
             "exit_code": 0,
-            "output_excerpt": "2 passed",
+            "output_excerpt": "3 passed",
         },
         "created_at": "2026-07-18T13:43:29Z",
     }

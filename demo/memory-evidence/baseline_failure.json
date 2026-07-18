@@ -1,11 +1,8 @@
 {
-  "command": [
-    "pytest",
-    "-q"
-  ],
-  "exit_code": 2,
-  "failure_signature": "import file mismatch",
-  "kind": "pytest_import_file_mismatch_baseline",
-  "label": "REPLAY — RECORDED EVIDENCE",
-  "output_excerpt": "\r\n=================================== ERRORS ====================================\r\n_________________ ERROR collecting tests_beta/test_runner.py __________________\r\nimport file mismatch:\r\nimported module 'test_runner' has this __file__ attribute:\r\n  <fixture>\\tests_alpha\\test_runner.py\r\nwhich is not the same as the test file we want to collect:\r\n  <fixture>\\tests_beta\\test_runner.py\r\nHINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules\r\n=========================== short test summary info ===========================\r\nERROR tests_beta/test_runner.py\r\n!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\r\n1 error in 0.19s\r\n\n"
+  "command": ["uv", "run", "pytest", "-q"],
+  "exit_code": 1,
+  "failure_signature": "billing.invoices has no attribute cancel_invoice",
+  "kind": "engineering_knowledge_gap_baseline",
+  "label": "BASELINE — KNOWLEDGE GAP",
+  "output_excerpt": ".FF [100%]\nAttributeError: module 'billing.invoices' has no attribute 'cancel_invoice'\nFAILED tests/test_invoices.py::test_cancel_invoice_sets_cancelled_status\nFAILED tests/test_invoices.py::test_cancel_invoice_preserves_append_only_audit_trail\n2 failed, 1 passed"
 }

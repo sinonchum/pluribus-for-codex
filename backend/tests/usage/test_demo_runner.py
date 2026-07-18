@@ -38,12 +38,12 @@ def test_replay_mode_is_explicit_and_emits_frozen_receipt() -> None:
     assert lines[0] == "REPLAY — RECORDED EVIDENCE"
     snapshot = json.loads("\n".join(lines[1:]))
     receipt = snapshot["latest_receipt"]
-    assert receipt["memory_id"] == "mem_pytest_importlib_v1"
-    assert receipt["matched_trigger"] == "import file mismatch"
+    assert receipt["memory_id"] == "mem_billing_audit_handoff_v1"
+    assert receipt["matched_trigger"] == "add a new invoice status"
     assert receipt["injected_into_codex"] is True
     assert receipt["codex_reported_use"] is True
-    assert receipt["changed_files"] == ["pyproject.toml"]
-    assert receipt["verification"]["command"] == ["pytest", "-q"]
+    assert receipt["changed_files"] == ["billing/invoices.py"]
+    assert receipt["verification"]["command"] == ["uv", "run", "pytest", "-q"]
     assert receipt["verification"]["exit_code"] == 0
 
 
@@ -69,7 +69,6 @@ def test_live_mode_runs_direct_adapter_and_emits_verified_receipt(
 ) -> None:
     workspace = tmp_path / "workspace"
     shutil.copytree(FIXTURE_ROOT, workspace, ignore=shutil.ignore_patterns(".venv"))
-    (workspace / "pyproject.toml").unlink()
     installed_root = tmp_path / "installed"
     installed_root.mkdir()
     adapter_script = tmp_path / "codex_adapter.py"
@@ -82,18 +81,20 @@ from pathlib import Path
 installed_root = Path(sys.argv[1])
 workspace = Path(sys.argv[2])
 assert installed_root.is_dir()
-(workspace / "pyproject.toml").write_text(
-    '[project]\\nname = "live-fixture"\\nversion = "0.1.0"\\n'
-    '[tool.pytest.ini_options]\\naddopts = "--import-mode=importlib"\\n',
-    encoding="utf-8",
+path = workspace / "billing" / "invoices.py"
+source = path.read_text(encoding="utf-8").replace(
+    '    PAID = "paid"\\n',
+    '    PAID = "paid"\\n    CANCELLED = "cancelled"\\n',
 )
+source += '''\\n\\ndef cancel_invoice(invoice: Invoice, ledger: list[LedgerEvent]) -> None:\n    transition_invoice(invoice, to_status=InvoiceStatus.CANCELLED, ledger=ledger, reason="customer_request")\n'''
+path.write_text(source, encoding="utf-8")
 print(json.dumps({
-    "memory_id": "mem_pytest_importlib_v1",
-    "matched_trigger": "import file mismatch",
+    "memory_id": "mem_billing_audit_handoff_v1",
+    "matched_trigger": "add a new invoice status",
     "injected_into_codex": True,
     "codex_reported_use": True,
-    "effect": "Configured pytest importlib collection mode.",
-    "changed_files": ["pyproject.toml"],
+    "effect": "Preserved the append-only billing audit trail.",
+    "changed_files": ["billing/invoices.py"],
 }))
 """,
         encoding="utf-8",
@@ -121,8 +122,8 @@ print(json.dumps({
 
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
-    assert lines[0] == "LIVE — CODEX EVIDENCE"
+    assert lines[0] == "LIVE — KNOWLEDGE HANDOFF"
     receipt = json.loads("\n".join(lines[1:]))
-    assert receipt["memory_id"] == "mem_pytest_importlib_v1"
-    assert receipt["changed_files"] == ["pyproject.toml"]
+    assert receipt["memory_id"] == "mem_billing_audit_handoff_v1"
+    assert receipt["changed_files"] == ["billing/invoices.py"]
     assert receipt["verification"]["exit_code"] == 0

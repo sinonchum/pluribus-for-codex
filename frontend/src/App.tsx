@@ -31,7 +31,7 @@ import {
 
 type Screen = "explore" | "detail" | "publish" | "installed" | "receipt";
 
-const tags = ["python", "pytest", "debugging", "codex"];
+const tags = ["billing", "audit", "handoff", "codex"];
 const fmt = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
 function initialMode(): ExecutionMode {
@@ -160,7 +160,7 @@ function App() {
       <header className="site-header">
         <button className="brand" onClick={() => navigate("explore")} aria-label="Pluribus home">
           <span className="brand-mark"><Code2 size={21} /></span>
-          <span>pluribus</span><em>/ memories</em>
+          <span>pluribus</span><em>/ handoff</em>
         </button>
         <nav aria-label="Primary navigation">
           <a href="#explore" className={screen === "explore" || screen === "detail" ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate("explore"); }}>Explore</a>
@@ -185,8 +185,8 @@ function App() {
       {screen === "receipt" && receipt && <ReceiptView receipt={receipt} memory={selected ?? replayMemory} mode={mode} back={() => navigate("installed")} />}
 
       <footer>
-        <span>Pluribus Memory Registry</span>
-        <span>Explicit local packages. Bounded Codex context. Verifiable use.</span>
+        <span>Pluribus Engineering Handoff</span>
+        <span>Local extraction. Employee-approved knowledge. Verifiable transfer.</span>
       </footer>
     </div>
   );
@@ -199,23 +199,23 @@ function Explore({ memories, query, setQuery, tag, setTag, loading, openMemory, 
   return <main>
     <section className="hero">
       <div className="hero-copy">
-        <p className="eyebrow">THE OPEN MEMORY REGISTRY FOR CODEX</p>
-        <h1>Reuse the debugging methods that already worked.</h1>
-        <p>Discover verified Codex memories, install them as explicit local packages, and prove when they help a task pass.</p>
+        <p className="eyebrow">ENGINEERING KNOWLEDGE HANDOFF FOR CODEX</p>
+        <h1>Your best engineer leaves. Their judgment doesn't have to.</h1>
+        <p>Turn years of company-specific engineering judgment into sanitized, employee-approved handoff memories that a successor's Codex can actually use.</p>
       </div>
       <div className="hero-actions">
-        <button className="primary" onClick={() => navigate("publish")}><Upload size={18} /> Publish a memory</button>
+        <button className="primary" onClick={() => navigate("publish")}><Upload size={18} /> Publish a handoff</button>
         <button className="secondary" onClick={() => navigate("installed")}><PackageCheck size={18} /> View My Codex</button>
       </div>
     </section>
 
     <section className="registry-section" aria-labelledby="explore-heading">
       <div className="section-heading">
-        <div><p className="eyebrow">PUBLIC REGISTRY</p><h2 id="explore-heading">Explore memories</h2></div>
+        <div><p className="eyebrow">TEAM KNOWLEDGE REGISTRY</p><h2 id="explore-heading">Explore handoff memories</h2></div>
         <span>{memories.length} {memories.length === 1 ? "result" : "results"}</span>
       </div>
       <div className="search-row">
-        <label className="search-box"><Search size={21} /><span className="sr-only">Search memories</span><input type="search" aria-label="Search memories" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search errors, methods, or tools…" /></label>
+        <label className="search-box"><Search size={21} /><span className="sr-only">Search memories</span><input type="search" aria-label="Search memories" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search services, rules, or incidents…" /></label>
         <button className="search-submit" type="button">Search registry</button>
       </div>
       <div className="tag-row" aria-label="Filter by tag">
@@ -224,7 +224,7 @@ function Explore({ memories, query, setQuery, tag, setTag, loading, openMemory, 
         {tags.map((item) => <button className={tag === item ? "selected" : ""} key={item} onClick={() => setTag(tag === item ? "" : item)}>#{item}</button>)}
       </div>
 
-      {loading ? <div className="empty-state">Loading live registry…</div> : memories.length === 0 ? <div className="empty-state"><Search size={28} /><strong>No memories match this search.</strong><span>Try “pytest” or clear the selected tag.</span></div> :
+      {loading ? <div className="empty-state">Loading live registry…</div> : memories.length === 0 ? <div className="empty-state"><Search size={28} /><strong>No memories match this search.</strong><span>Try “billing” or clear the selected tag.</span></div> :
         <div className="memory-grid">{memories.map((memory) => <MemoryCard key={memory.id} memory={memory} open={() => openMemory(memory)} />)}</div>}
     </section>
   </main>;
@@ -252,19 +252,19 @@ function MemoryDetail({ memory, installed, loading, install, back, openInstalled
     <button className="back-link" onClick={back}><ArrowLeft size={17} /> Back to Explore</button>
     <div className="detail-layout">
       <article className="detail-main">
-        <div className="detail-kicker"><VerifiedBadge /><span>Published by <strong>{memory.author.display_name}</strong></span></div>
+        <div className="detail-kicker"><VerifiedBadge /><span>Handoff published by <strong>{memory.author.display_name}</strong></span></div>
         <h1>{memory.title}</h1>
         <p className="lead">{memory.summary}</p>
         <div className="tags">{memory.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div>
-        <section><p className="eyebrow">PROBLEM</p><h2>When this memory helps</h2><p>{memory.problem}</p></section>
+        <section><p className="eyebrow">IMPLICIT TEAM RULE</p><h2>What Git cannot preserve</h2><p>{memory.problem}</p></section>
         <section><p className="eyebrow">MATCHING TRIGGERS</p><h2>Signals Codex can match</h2><div className="trigger-list">{memory.triggers.map((trigger) => <code key={trigger}>{trigger}</code>)}</div></section>
-        <section><p className="eyebrow">REUSABLE METHOD</p><h2>Steps</h2><ol className="steps">{memory.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></section>
+        <section><p className="eyebrow">ALICE'S HANDOFF</p><h2>Reusable judgment</h2><ol className="steps">{memory.steps.map((step, index) => <li key={step}><span>{index + 1}</span><p>{step}</p></li>)}</ol></section>
         <section className="evidence-panel"><div><p className="eyebrow">VERIFICATION EVIDENCE</p><h2><CheckCircle2 /> Coordinator check passed</h2></div><div className="command"><code>{memory.verification.command.join(" ")}</code><strong>exit {memory.verification.exit_code}</strong></div><pre>{memory.verification.evidence_excerpt}</pre><p>{memory.verification.passed} checks passed in the recorded verification.</p></section>
       </article>
       <aside className="install-panel">
         <Box size={26} />
-        <h2>Install this memory</h2>
-        <p>Adds an explicit Pluribus-managed memory package to the project. It does not alter hidden model state.</p>
+        <h2>Install this handoff</h2>
+        <p>Adds Alice's explicit, reviewed knowledge package to Bob's project. It does not alter hidden model state.</p>
         {installed ? <button className="installed-button" disabled><Check size={19} /> Installed</button> : <button className="primary full" disabled={loading} onClick={install}><Download size={19} /> {loading ? "Installing…" : "Install to Codex"}</button>}
         {installed && <button className="text-action" onClick={openInstalled}>View in My Codex <ArrowRight size={16} /></button>}
         <dl><div><dt>Version</dt><dd>{memory.version}</dd></div><div><dt>Memory ID</dt><dd><code>{memory.id}</code></dd></div><div><dt>Compatibility</dt><dd>{memory.compatibility.join(" · ")}</dd></div><div><dt>Fork lineage</dt><dd>{memory.fork_of ? <><GitFork size={14} /> {memory.fork_of}</> : "Original memory"}</dd></div><div><dt>Installs</dt><dd>{memory.installs.toLocaleString()}</dd></div></dl>
@@ -301,9 +301,9 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
     const capsule: MemoryCapsule = {
       id: `mem_${slug.replaceAll("-", "_")}_v1`, slug, title: fields.title.trim(), summary: fields.summary.trim(), problem: fields.problem.trim(),
       triggers: lines(fields.triggers), steps: lines(fields.steps), tags: csv(fields.tags),
-      author: { id: "dev_bob", display_name: "Bob Rivera" }, version: fields.version,
+      author: { id: "dev_alice", display_name: "Alice Chen · Billing, 4 years" }, version: fields.version,
       compatibility: csv(fields.compatibility), status: "verified",
-      verification: { command: ["pytest", "-q"], exit_code: 0, passed: 4, evidence_excerpt: "4 passed" },
+      verification: { command: ["uv", "run", "pytest", "-q"], exit_code: 0, passed: 3, evidence_excerpt: "3 passed" },
       stars: 0, installs: 0, fork_of: null, created_at: "2026-07-18T10:00:00Z",
     };
     setSubmitting(true);
@@ -313,12 +313,12 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
   };
 
   return <main className="publish-page">
-    <div className="page-intro"><p className="eyebrow">SHARE A METHOD, NOT A TRANSCRIPT</p><h1>Publish Memory</h1><p>Publish a sanitized, structured debugging method with explicit verification evidence. Raw Codex conversations are never accepted.</p></div>
+    <div className="page-intro"><p className="eyebrow">HAND OFF JUDGMENT, NOT TRANSCRIPTS</p><h1>Publish Memory</h1><p>Extract locally, remove secrets, and let the departing engineer approve a structured handoff with verification evidence. Raw Codex conversations are never uploaded.</p></div>
     <form className="publish-form" onSubmit={submit} noValidate>
       {errors.length > 0 && <div className="validation" role="alert"><strong>Please complete the capsule:</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
-      <fieldset><legend>Memory identity</legend><div className="field-grid"><label><span>Title <b>Required</b></span><input value={fields.title} onChange={(e) => update("title", e.target.value)} placeholder="Fix duplicate test module collisions" /></label><label><span>Version <b>Required</b></span><input value={fields.version} onChange={(e) => update("version", e.target.value)} /></label></div><label><span>Summary <b>Required</b></span><textarea value={fields.summary} onChange={(e) => update("summary", e.target.value)} placeholder="A concise statement of the reusable method." rows={2} /></label><label><span>Problem <b>Required</b></span><textarea value={fields.problem} onChange={(e) => update("problem", e.target.value)} placeholder="Describe the failure this memory solves." rows={3} /></label></fieldset>
-      <fieldset><legend>Matching & method</legend><div className="field-grid"><label><span>Trigger phrases <b>One per line</b></span><textarea value={fields.triggers} onChange={(e) => update("triggers", e.target.value)} placeholder={"import file mismatch\nduplicate test module"} rows={5} /></label><label><span>Reusable steps <b>One per line</b></span><textarea value={fields.steps} onChange={(e) => update("steps", e.target.value)} placeholder={"Confirm the collision.\nConfigure importlib mode.\nRun verification."} rows={5} /></label></div><div className="field-grid"><label><span>Tags <b>Comma separated</b></span><input value={fields.tags} onChange={(e) => update("tags", e.target.value)} placeholder="python, pytest, debugging" /></label><label><span>Compatibility <b>Comma separated</b></span><input value={fields.compatibility} onChange={(e) => update("compatibility", e.target.value)} /></label></div></fieldset>
-      <section className="safe-evidence"><ShieldCheck size={24} /><div><strong>Fixed, sanitized verification</strong><p>Publisher: Bob Rivera · Command: <code>pytest -q</code> · Exit code: 0 · Evidence: 4 passed</p></div></section>
+      <fieldset><legend>Memory identity</legend><div className="field-grid"><label><span>Title <b>Required</b></span><input value={fields.title} onChange={(e) => update("title", e.target.value)} placeholder="Preserve billing audit trail" /></label><label><span>Version <b>Required</b></span><input value={fields.version} onChange={(e) => update("version", e.target.value)} /></label></div><label><span>Summary <b>Required</b></span><textarea value={fields.summary} onChange={(e) => update("summary", e.target.value)} placeholder="The company-specific judgment a successor needs." rows={2} /></label><label><span>Problem <b>Required</b></span><textarea value={fields.problem} onChange={(e) => update("problem", e.target.value)} placeholder="Describe the hidden risk this handoff prevents." rows={3} /></label></fieldset>
+      <fieldset><legend>Matching & method</legend><div className="field-grid"><label><span>Trigger phrases <b>One per line</b></span><textarea value={fields.triggers} onChange={(e) => update("triggers", e.target.value)} placeholder={"add a new invoice status\ncancel an invoice"} rows={5} /></label><label><span>Reusable steps <b>One per line</b></span><textarea value={fields.steps} onChange={(e) => update("steps", e.target.value)} placeholder={"Avoid direct state assignment.\nUse the audited transition primitive.\nRun verification."} rows={5} /></label></div><div className="field-grid"><label><span>Tags <b>Comma separated</b></span><input value={fields.tags} onChange={(e) => update("tags", e.target.value)} placeholder="billing, audit, handoff" /></label><label><span>Compatibility <b>Comma separated</b></span><input value={fields.compatibility} onChange={(e) => update("compatibility", e.target.value)} /></label></div></fieldset>
+      <section className="safe-evidence"><ShieldCheck size={24} /><div><strong>Employee-approved, sanitized verification</strong><p>Publisher: Alice Chen · Command: <code>uv run pytest -q</code> · Exit code: 0 · Evidence: 3 passed</p></div></section>
       <div className="form-actions"><p>{mode === "replay" ? "Replay validates the complete shape locally; it does not publish to the API." : "Live mode submits this exact Memory Capsule to the registry API."}</p><button className="primary" disabled={submitting} type="submit"><Upload size={18} /> {submitting ? "Publishing…" : mode === "replay" ? "Publish memory — validation only" : "Publish verified memory"}</button></div>
     </form>
   </main>;
@@ -326,7 +326,7 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
 
 function Installed({ memories, manifests, mode, openMemory, run }: { memories: MemoryCapsule[]; manifests: InstallManifest[]; mode: ExecutionMode; openMemory: (memory: MemoryCapsule) => void; run: () => void }) {
   return <main className="installed-page">
-    <div className="page-intro"><p className="eyebrow">PLURIBUS-MANAGED LOCAL PACKAGES</p><h1>My Codex</h1><p>Installed memories are explicit files Pluribus can match and inject into bounded Codex task context.</p></div>
+    <div className="page-intro"><p className="eyebrow">BOB'S INSTALLED HANDOFFS</p><h1>My Codex</h1><p>Installed handoffs are explicit files Pluribus can match and inject into Bob's bounded Codex task context.</p></div>
     {memories.length === 0 ? <section className="empty-state large"><Box size={34} /><strong>No memories installed yet.</strong><span>Open a memory from Explore and install it to continue the demo.</span></section> : memories.map((memory) => {
       const manifest = manifests.find((item) => item.memory_id === memory.id);
       return <article className="installed-card" aria-label={memory.title} key={memory.id}>
@@ -348,7 +348,7 @@ function ReceiptView({ receipt, memory, mode, back }: { receipt: UsageReceipt; m
   ];
   return <main className="receipt-page">
     <button className="back-link" onClick={back}><ArrowLeft size={17} /> Back to My Codex</button>
-    <header className="receipt-header"><div><p className="eyebrow">VERIFIED PROOF · {receipt.id}</p><h1>Usage Receipt</h1><p>Publisher, installed memory, consumer, concrete change, and coordinator verification—linked in one receipt.</p></div><span className="receipt-pass"><CheckCircle2 size={26} /> VERIFIED</span></header>
+    <header className="receipt-header"><div><p className="eyebrow">KNOWLEDGE TRANSFER PROOF · {receipt.id}</p><h1>Usage Receipt</h1><p>Alice's judgment, Bob's Codex task, the concrete code change, and coordinator verification—linked in one receipt.</p></div><span className="receipt-pass"><CheckCircle2 size={26} /> VERIFIED</span></header>
     <div className={`receipt-mode ${mode}`}>{mode === "replay" ? replayMetadata.label : "LIVE"}</div>
     <ol className="proof-chain" aria-label="Usage Receipt proof chain">{proof.map((item, index) => <li key={item.label}><div className="proof-number">{index + 1}</div><div className="proof-icon">{item.icon}</div><div><span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small></div>{index < proof.length - 1 && <ChevronRight className="proof-arrow" />}</li>)}</ol>
     <div className="receipt-evidence">

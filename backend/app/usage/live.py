@@ -12,11 +12,11 @@ from app.usage import UsageProof, UsageReceipt, build_usage_receipt
 from app.usage.verification import run_coordinator_verification
 from app.verification.runner import CommandSpec, CommandStatus, run_command
 
-_MEMORY_ID = "mem_pytest_importlib_v1"
-_EXPECTED_CHANGED_FILES = ("pyproject.toml",)
+_MEMORY_ID = "mem_billing_audit_handoff_v1"
+_EXPECTED_CHANGED_FILES = ("billing/invoices.py",)
 _EXCLUDED_DIRECTORIES = {".venv", ".pytest_cache", "__pycache__"}
 _ADAPTER_OUTPUT_LIMIT_BYTES = 16_384
-_ADAPTER_TIMEOUT_SECONDS = 60
+_ADAPTER_TIMEOUT_SECONDS = 180
 _CODEX_RESULT_KEYS = {
     "memory_id",
     "matched_trigger",
@@ -161,6 +161,11 @@ def _is_reparse_point(path: Path) -> bool:
 
 def _reject_workspace_links(workspace: Path) -> None:
     for root, directories, files in os.walk(workspace, followlinks=False):
+        directories[:] = [
+            directory
+            for directory in directories
+            if directory not in _EXCLUDED_DIRECTORIES
+        ]
         for name in (*directories, *files):
             path = Path(root) / name
             if path.is_symlink() or _is_reparse_point(path):
@@ -223,7 +228,7 @@ async def run_live_usage(
     if result.changed_files != actual_changed_files:
         raise ValueError("reported changed_files must equal the actual workspace delta")
     if actual_changed_files != _EXPECTED_CHANGED_FILES:
-        raise ValueError("the live change must be exactly pyproject.toml")
+        raise ValueError("the live change must be exactly billing/invoices.py")
 
     verification = await run_coordinator_verification(workspace, verification_command)
     return build_usage_receipt(
