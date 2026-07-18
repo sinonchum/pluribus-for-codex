@@ -1,69 +1,53 @@
 # Pluribus for Codex
 
-**Many Codex agents. One shared, evidence-backed working memory.**
+**The open registry for reusable, verified Codex memories.**
 
-> Codex agents do not need a group chat. They need a shared evidence ledger.
+> GitHub for useful Codex memories.
 
-Pluribus for Codex is a local multi-agent orchestration layer that coordinates several Codex workers on one software mission. Each agent receives a specialized role, writing agents use isolated Git worktrees, and evidence-backed discoveries, constraints, risks, decisions, and test results propagate through a shared Hive Blackboard.
-
-The goal is not merely to run several agents in parallel. The goal is to make an insight discovered by one agent change the work performed by the others—without giving agents a shared, collision-prone filesystem or allowing unsupported claims to become collective truth.
+Pluribus lets developers publish debugging methods and coding best practices learned with Codex, discover memories created by others, install them into a local Pluribus-managed Codex memory pack, and preserve evidence that an installed memory was actually used and followed by successful verification.
 
 ## Core loop
 
 ```text
-Scout discovers a repository fact
-              ↓
-Fact is linked to file/test evidence
-              ↓
-Hive Blackboard validates, labels, and stores it
-              ↓
-Builder, Tester, and Reviewer consume it
-              ↓
-Coordinator deterministically integrates test and implementation patches
-              ↓
-Independent verification proves the result
+Publish → Discover → Install → Codex Uses → Verify
 ```
 
-## One-day hackathon MVP
+A useful technique should not disappear inside one developer's Codex conversation. Pluribus turns it into a versioned Memory Capsule with explicit triggers, reusable steps, compatibility metadata, sanitized evidence, and usage receipts.
 
-The MVP deliberately uses a fixed, reliable workflow:
+## Fixed hackathon demo
 
-```text
-Scout → Builder + Tester Phase A → Integrate → Verify → Reviewer → Final Verify
-```
+Developer A publishes a verified memory for fixing duplicate pytest module collisions with `--import-mode=importlib`. Developer B finds and installs it. Pluribus injects the matching memory into a bounded Codex task. The resulting repository change passes coordinator-run verification, and a receipt connects the publisher, memory, consumer, changed file, and test output.
 
-- **Scout:** maps the repository and publishes evidence-backed findings.
-- **Builder:** implements the smallest compliant patch in an isolated worktree.
-- **Tester:** creates acceptance criteria and a focused test patch in parallel with Builder; the Coordinator later runs those tests against the integrated result.
-- **Reviewer:** challenges the integrated diff and Coordinator-run test evidence for scope, security, and regressions.
-- **Coordinator:** owns bounded scheduling, context synchronization, deterministic Git integration, and independent verification.
+## Honest boundary
 
-## Key principles
+Pluribus does not claim to mutate hidden Codex model memory. It manages explicit local memory packages and injects relevant installed memories into Codex task context through the Codex adapter.
 
-1. **Shared evidence, not shared chatter** — agents publish structured Knowledge Patches rather than unbounded conversations.
-2. **Independent reasoning, isolated execution** — writing agents use separate Git worktrees and branches.
-3. **Evidence-weighted consensus** — executed tests and source references outrank unsupported agent opinions.
-4. **Turn-boundary synchronization** — the latest relevant Hive context is injected before each bounded Codex turn.
-5. **Coordinator-owned verification** — an agent's claim of success never substitutes for real test output.
-6. **Causal knowledge tracking** — the system distinguishes a patch delivered to a worker from a patch the worker actually consumed and used.
+## Pivot documents
+
+- [Memory Registry scope and shared contract](docs/MEMORY_REGISTRY_SCOPE.md)
+- [Four-person execution plan](docs/TEAM_EXECUTION_PLAN_V2.md)
+
+The earlier mission-orchestration PRD and execution plan remain in the repository as historical hackathon work but are superseded by the documents above for the current build.
 
 ## MVP technology
 
 - Python 3.11 + FastAPI
-- SQLite event and knowledge store
-- `asyncio` subprocess supervision
-- Git branches/worktrees
-- Server-Sent Events
-- React/Vite or HTMX dashboard
+- SQLite registry and usage-receipt store
+- Local Markdown memory packages with hashed manifests
 - Local Codex CLI adapter
-
-## Product requirements
-
-The complete product requirements document is available at [docs/PRD.md](docs/PRD.md).
+- Safe coordinator-run verification
+- React/Vite marketplace UI
 
 ## Status
 
-Scope-frozen v0.2 product specification. The implementation is intentionally limited to one fixed demo repository and mission, four fixed Codex roles, maximum concurrency of two, a three-panel dashboard, and one independently verified result.
+Pivot scope frozen for the one-day hackathon MVP. The only required end-to-end story is:
+
+```text
+one developer publishes a verified memory
+→ another developer discovers and installs it
+→ Codex receives and uses it
+→ coordinator verification passes
+```
 
 ## License
 
