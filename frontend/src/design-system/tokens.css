@@ -1,0 +1,109 @@
+:root {
+  color-scheme: light;
+
+  /* Brand palette */
+  --ds-color-ink-950: #07110f;
+  --ds-color-ink-900: #101c19;
+  --ds-color-ink-800: #192723;
+  --ds-color-ink-700: #293934;
+  --ds-color-ink-600: #42544d;
+  --ds-color-ink-500: #61706a;
+  --ds-color-ink-400: #89958f;
+  --ds-color-paper-100: #edf0eb;
+  --ds-color-paper-50: #f7f8f4;
+  --ds-color-white: #ffffff;
+  --ds-color-signal-500: #00df79;
+  --ds-color-signal-600: #00b865;
+  --ds-color-signal-50: #d9ffeb;
+  --ds-color-warning-500: #c88300;
+  --ds-color-danger-500: #d33c45;
+  --ds-color-danger-50: #ffe7e9;
+
+  /* Semantic colors */
+  --ds-color-bg-canvas: var(--ds-color-paper-100);
+  --ds-color-bg-surface: var(--ds-color-white);
+  --ds-color-bg-inverse: var(--ds-color-ink-950);
+  --ds-color-bg-inverse-soft: var(--ds-color-ink-900);
+  --ds-color-text-primary: var(--ds-color-ink-950);
+  --ds-color-text-secondary: var(--ds-color-ink-500);
+  --ds-color-text-tertiary: var(--ds-color-ink-400);
+  --ds-color-text-inverse: var(--ds-color-white);
+  --ds-color-accent: var(--ds-color-signal-500);
+  --ds-color-accent-strong: var(--ds-color-signal-600);
+  --ds-color-border: #cdd5d0;
+  --ds-color-border-inverse: var(--ds-color-ink-700);
+  --ds-color-success: var(--ds-color-signal-600);
+  --ds-color-warning: var(--ds-color-warning-500);
+  --ds-color-danger: var(--ds-color-danger-500);
+
+  /* Typography */
+  --ds-font-sans: "Pluribus Sans", "Helvetica Neue", Arial, sans-serif;
+  --ds-font-mono: "IBM Plex Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --ds-font-size-1: 0.5rem;
+  --ds-font-size-2: 0.625rem;
+  --ds-font-size-3: 0.75rem;
+  --ds-font-size-4: 0.875rem;
+  --ds-font-size-5: 1rem;
+  --ds-font-size-6: 1.125rem;
+  --ds-font-size-7: 1.5rem;
+  --ds-font-size-8: 2.125rem;
+  --ds-font-size-9: clamp(2.125rem, 4vw, 3.75rem);
+  --ds-font-size-hero: clamp(3.375rem, 6.2vw, 5.75rem);
+  --ds-line-tight: 0.95;
+  --ds-line-heading: 1.05;
+  --ds-line-body: 1.5;
+  --ds-weight-regular: 400;
+  --ds-weight-medium: 650;
+  --ds-weight-bold: 750;
+  --ds-weight-black: 850;
+  --ds-tracking-tight: -0.055em;
+  --ds-tracking-label: 0.1em;
+
+  /* 4px spacing system */
+  --ds-space-0: 0;
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
+  --ds-space-12: 3rem;
+  --ds-space-14: 3.5rem;
+  --ds-space-16: 4rem;
+  --ds-space-20: 5rem;
+  --ds-space-24: 6rem;
+
+  /* Geometry, elevation, motion */
+  --ds-radius-none: 0;
+  --ds-radius-xs: 2px;
+  --ds-border-thin: 1px;
+  --ds-border-strong: 2px;
+  --ds-shadow-signal: 12px 12px 0 var(--ds-color-accent);
+  --ds-duration-fast: 120ms;
+  --ds-duration-normal: 180ms;
+  --ds-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ds-focus-ring: 3px solid var(--ds-color-accent);
+  --ds-content-max: 1380px;
+  --ds-control-height-sm: 32px;
+  --ds-control-height-md: 46px;
+  --ds-z-sticky: 20;
+
+  /* Backward-compatible aliases used by the current application. */
+  --ink: var(--ds-color-ink-950);
+  --ink-soft: var(--ds-color-ink-900);
+  --paper: var(--ds-color-paper-50);
+  --paper-deep: var(--ds-color-paper-100);
+  --white: var(--ds-color-white);
+  --muted: var(--ds-color-ink-500);
+  --dim: var(--ds-color-ink-400);
+  --line: var(--ds-color-border);
+  --line-dark: var(--ds-color-border-inverse);
+  --signal: var(--ds-color-signal-500);
+  --signal-dark: var(--ds-color-signal-600);
+  --success: var(--ds-color-success);
+  --warning: var(--ds-color-warning);
+  --danger: var(--ds-color-danger);
+  --mono: var(--ds-font-mono);
+}

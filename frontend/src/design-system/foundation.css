@@ -1,0 +1,83 @@
+@font-face {
+  font-family: "Pluribus Sans";
+  src: local("Arial");
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--ds-color-bg-canvas);
+  font-family: var(--ds-font-sans);
+  color: var(--ds-color-text-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--ds-color-bg-canvas);
+  color: var(--ds-color-text-primary);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: var(--ds-focus-ring);
+  outline-offset: 2px;
+}
+
+code,
+kbd,
+samp,
+pre,
+.ds-mono,
+.overline,
+.eyebrow,
+.status,
+.duration,
+.connection,
+.ready,
+.kicker {
+  font-family: var(--ds-font-mono);
+}
+
+::selection {
+  color: var(--ds-color-ink-950);
+  background: var(--ds-color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

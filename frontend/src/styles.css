@@ -1,74 +1,6 @@
-@font-face {
-  font-family: "Pluribus Sans";
-  src: local("Arial");
-  font-display: swap;
-}
+@import "./design-system/index.css";
 
-:root {
-  font-family: "Pluribus Sans", "Helvetica Neue", Arial, sans-serif;
-  color: #07110f;
-  background: #edf0eb;
-  font-synthesis: none;
-  --ink: #07110f;
-  --ink-soft: #101c19;
-  --paper: #f7f8f4;
-  --paper-deep: #edf0eb;
-  --white: #ffffff;
-  --muted: #61706a;
-  --dim: #89958f;
-  --line: #cdd5d0;
-  --line-dark: #293934;
-  --signal: #00df79;
-  --signal-dark: #00b865;
-  --success: #00b865;
-  --warning: #c88300;
-  --danger: #d33c45;
-  --mono: "IBM Plex Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  background: var(--paper-deep);
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: var(--paper-deep);
-  color: var(--ink);
-}
-
-button,
-input,
-textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-}
-
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid var(--signal);
-  outline-offset: 2px;
-}
-
-code,
-.overline,
-.eyebrow,
-.status,
-.duration,
-.connection,
-.ready,
-.kicker {
-  font-family: var(--mono);
-}
+/* Mission Control compositions built on the Pluribus design system. */
 
 .topbar,
 .control-nav {
@@ -108,16 +40,6 @@ code,
   color: #d8dfdb;
   font-weight: 650;
   letter-spacing: 0;
-}
-
-.eyebrow,
-.overline {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
 }
 
 .topbar .eyebrow {
