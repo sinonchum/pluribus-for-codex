@@ -1,0 +1,82 @@
+warning: in the working copy of 'src/server.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/health.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/health.test.js', LF will be replaced by CRLF the next time Git touches it
+diff --git a/src/server.js b/src/server.js
+index f734795..21de9fd 100644
+--- a/src/server.js
++++ b/src/server.js
+@@ -1,12 +1,14 @@
+ import http from "node:http";
+-import { HealthService } from "./services/health.js";
+-const health = new HealthService();
+-const server = http.createServer(async (request, response) => {
+-  if (request.url === "/health") {
+-    response.writeHead(200, { "content-type": "application/json" });
+-    response.end(JSON.stringify(await health.basic()));
+-    return;
++import { createHealthService } from "./services/health.js";
++const health = createHealthService();
++export const server = http.createServer(async (req, res) => {
++  res.setHeader("content-type", "application/json");
++  if (req.url === "/health") return res.end(JSON.stringify(health.basic()));
++  if (req.url === "/health/details") {
++    const details = await health.details();
++    res.statusCode = details.database === "degraded" ? 503 : 200;
++    return res.end(JSON.stringify(details));
+   }
+-  response.writeHead(404).end();
++  res.statusCode = 404; res.end(JSON.stringify({ error: "not_found" }));
+ });
+-server.listen(Number(process.env.PORT ?? 4100), "127.0.0.1");
++if (process.env.NODE_ENV !== "test") server.listen(3030);
+diff --git a/src/services/health.js b/src/services/health.js
+index 644c11c..dbcf17c 100644
+--- a/src/services/health.js
++++ b/src/services/health.js
+@@ -1,4 +1,14 @@
+-export class HealthService {
+-  constructor(database = { ping: async () => true }) { this.database = database; }
+-  async basic() { return { status: (await this.database.ping()) ? "ok" : "degraded" }; }
+-}
++import { applicationVersion } from "../config/version.js";
++
++const startedAt = Date.now();
++export const createHealthService = (database = { ping: async () => true }) => ({
++  basic: () => ({ status: "ok" }),
++  details: async () => {
++    try {
++      await database.ping();
++      return { version: applicationVersion, uptime_seconds: Math.floor((Date.now() - startedAt) / 1000), database: "ok" };
++    } catch {
++      return { version: applicationVersion, uptime_seconds: Math.floor((Date.now() - startedAt) / 1000), database: "degraded" };
++    }
++  }
++});
+diff --git a/test/health.test.js b/test/health.test.js
+index e4508a7..cf05a69 100644
+--- a/test/health.test.js
++++ b/test/health.test.js
+@@ -1,7 +1,20 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+-import { HealthService } from "../src/services/health.js";
++import { createHealthService } from "../src/services/health.js";
+ 
+-test("existing basic health reports ok", async () => {
+-  assert.deepEqual(await new HealthService().basic(), { status: "ok" });
++test("existing basic health reports ok", () => {
++  assert.deepEqual(createHealthService().basic(), { status: "ok" });
++});
++
++test("detailed health reports version, uptime, and healthy database", async () => {
++  const result = await createHealthService().details();
++  assert.equal(result.version, "1.4.0");
++  assert.equal(result.database, "ok");
++  assert.equal(typeof result.uptime_seconds, "number");
++});
++
++test("database failures are degraded without leaking the raw error", async () => {
++  const result = await createHealthService({ ping: async () => { throw new Error("postgres password=secret"); } }).details();
++  assert.equal(result.database, "degraded");
++  assert.equal("error" in result, false);
+ });
