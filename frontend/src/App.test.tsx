@@ -102,6 +102,41 @@ describe("Codex knowledge handoff marketplace", () => {
     expectReplayEvidenceLabel();
   });
 
+  it("publishes knowledge without asking for code compatibility or a manual version", async () => {
+    const user = renderMarketplace();
+
+    await user.click(screen.getByRole("link", { name: "Publish" }));
+
+    expect(screen.getByRole("heading", { name: "Capture the judgment" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Teach Codex when to recall it" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Give Codex the playbook" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/compatibility/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/version/i)).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/memory title/i), "Handle enterprise refund exceptions");
+    await user.type(
+      screen.getByLabelText(/one-sentence takeaway/i),
+      "Escalate enterprise refunds before changing financial records.",
+    );
+    await user.type(
+      screen.getByLabelText(/hidden risk or context/i),
+      "Direct refunds can violate negotiated enterprise settlement terms.",
+    );
+    await user.type(screen.getByLabelText(/when should codex recall this/i), "refund an enterprise customer");
+    await user.type(screen.getByLabelText(/search tags/i), "billing, refunds, handoff");
+    await user.type(
+      screen.getByLabelText(/what should codex do/i),
+      "Check the account tier.\nRequest finance approval.",
+    );
+    await user.click(screen.getByRole("button", { name: /publish memory/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Handle enterprise refund exceptions" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/enterprise settlement terms/i)).toBeInTheDocument();
+    expect(screen.queryByText("Compatibility")).not.toBeInTheDocument();
+  });
+
   it("rejects an incomplete Memory Capsule and offers no transcript upload", async () => {
     const user = renderMarketplace();
 
@@ -111,7 +146,9 @@ describe("Codex knowledge handoff marketplace", () => {
 
     await user.click(screen.getByRole("button", { name: /publish memory/i }));
 
-    expect(screen.getByRole("heading", { name: /publish memory/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /publish what the next engineer should know/i }),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole("alert").length).toBeGreaterThan(0);
     expect(screen.queryByText(/published successfully/i)).not.toBeInTheDocument();
   });

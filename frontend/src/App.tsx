@@ -267,14 +267,14 @@ function MemoryDetail({ memory, installed, loading, install, back, openInstalled
         <p>Adds Alice's explicit, reviewed knowledge package to Bob's project. It does not alter hidden model state.</p>
         {installed ? <button className="installed-button" disabled><Check size={19} /> Installed</button> : <button className="primary full" disabled={loading} onClick={install}><Download size={19} /> {loading ? "Installing…" : "Install to Codex"}</button>}
         {installed && <button className="text-action" onClick={openInstalled}>View in My Codex <ArrowRight size={16} /></button>}
-        <dl><div><dt>Version</dt><dd>{memory.version}</dd></div><div><dt>Memory ID</dt><dd><code>{memory.id}</code></dd></div><div><dt>Compatibility</dt><dd>{memory.compatibility.join(" · ")}</dd></div><div><dt>Fork lineage</dt><dd>{memory.fork_of ? <><GitFork size={14} /> {memory.fork_of}</> : "Original memory"}</dd></div><div><dt>Installs</dt><dd>{memory.installs.toLocaleString()}</dd></div></dl>
+        <dl><div><dt>Version</dt><dd>{memory.version}</dd></div><div><dt>Memory ID</dt><dd><code>{memory.id}</code></dd></div>{memory.compatibility.length > 0 && <div><dt>Compatibility</dt><dd>{memory.compatibility.join(" · ")}</dd></div>}<div><dt>Fork lineage</dt><dd>{memory.fork_of ? <><GitFork size={14} /> {memory.fork_of}</> : "Original memory"}</dd></div><div><dt>Installs</dt><dd>{memory.installs.toLocaleString()}</dd></div></dl>
       </aside>
     </div>
   </main>;
 }
 
-type PublishFields = { title: string; summary: string; problem: string; triggers: string; steps: string; tags: string; compatibility: string; version: string; };
-const publishDefaults: PublishFields = { title: "", summary: "", problem: "", triggers: "", steps: "", tags: "", compatibility: "python>=3.11", version: "1.0.0" };
+type PublishFields = { title: string; summary: string; problem: string; triggers: string; steps: string; tags: string; };
+const publishDefaults: PublishFields = { title: "", summary: "", problem: "", triggers: "", steps: "", tags: "" };
 
 function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (memory: MemoryCapsule) => void }) {
   const [fields, setFields] = useState(publishDefaults);
@@ -293,7 +293,6 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
     if (lines(fields.triggers).length < 1) nextErrors.push("Add at least one matching trigger, one per line.");
     if (lines(fields.steps).length < 2) nextErrors.push("Add at least two reusable steps, one per line.");
     if (csv(fields.tags).length < 1) nextErrors.push("Add at least one tag.");
-    if (!/^\d+\.\d+\.\d+$/.test(fields.version)) nextErrors.push("Version must use semantic versioning, for example 1.0.0.");
     setErrors(nextErrors);
     if (nextErrors.length) return;
 
@@ -301,8 +300,8 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
     const capsule: MemoryCapsule = {
       id: `mem_${slug.replaceAll("-", "_")}_v1`, slug, title: fields.title.trim(), summary: fields.summary.trim(), problem: fields.problem.trim(),
       triggers: lines(fields.triggers), steps: lines(fields.steps), tags: csv(fields.tags),
-      author: { id: "dev_alice", display_name: "Alice Chen · Billing, 4 years" }, version: fields.version,
-      compatibility: csv(fields.compatibility), status: "verified",
+      author: { id: "dev_alice", display_name: "Alice Chen · Billing, 4 years" }, version: "1.0.0",
+      compatibility: [], status: "verified",
       verification: { command: ["uv", "run", "pytest", "-q"], exit_code: 0, passed: 3, evidence_excerpt: "3 passed" },
       stars: 0, installs: 0, fork_of: null, created_at: "2026-07-18T10:00:00Z",
     };
@@ -312,14 +311,44 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
     finally { setSubmitting(false); }
   };
 
-  return <main className="publish-page">
-    <div className="page-intro"><p className="eyebrow">HAND OFF JUDGMENT, NOT TRANSCRIPTS</p><h1>Publish Memory</h1><p>Extract locally, remove secrets, and let the departing engineer approve a structured handoff with verification evidence. Raw Codex conversations are never uploaded.</p></div>
-    <form className="publish-form" onSubmit={submit} noValidate>
-      {errors.length > 0 && <div className="validation" role="alert"><strong>Please complete the capsule:</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
-      <fieldset><legend>Memory identity</legend><div className="field-grid"><label><span>Title <b>Required</b></span><input value={fields.title} onChange={(e) => update("title", e.target.value)} placeholder="Preserve billing audit trail" /></label><label><span>Version <b>Required</b></span><input value={fields.version} onChange={(e) => update("version", e.target.value)} /></label></div><label><span>Summary <b>Required</b></span><textarea value={fields.summary} onChange={(e) => update("summary", e.target.value)} placeholder="The company-specific judgment a successor needs." rows={2} /></label><label><span>Problem <b>Required</b></span><textarea value={fields.problem} onChange={(e) => update("problem", e.target.value)} placeholder="Describe the hidden risk this handoff prevents." rows={3} /></label></fieldset>
-      <fieldset><legend>Matching & method</legend><div className="field-grid"><label><span>Trigger phrases <b>One per line</b></span><textarea value={fields.triggers} onChange={(e) => update("triggers", e.target.value)} placeholder={"add a new invoice status\ncancel an invoice"} rows={5} /></label><label><span>Reusable steps <b>One per line</b></span><textarea value={fields.steps} onChange={(e) => update("steps", e.target.value)} placeholder={"Avoid direct state assignment.\nUse the audited transition primitive.\nRun verification."} rows={5} /></label></div><div className="field-grid"><label><span>Tags <b>Comma separated</b></span><input value={fields.tags} onChange={(e) => update("tags", e.target.value)} placeholder="billing, audit, handoff" /></label><label><span>Compatibility <b>Comma separated</b></span><input value={fields.compatibility} onChange={(e) => update("compatibility", e.target.value)} /></label></div></fieldset>
-      <section className="safe-evidence"><ShieldCheck size={24} /><div><strong>Employee-approved, sanitized verification</strong><p>Publisher: Alice Chen · Command: <code>uv run pytest -q</code> · Exit code: 0 · Evidence: 3 passed</p></div></section>
-      <div className="form-actions"><p>{mode === "replay" ? "Replay validates the complete shape locally; it does not publish to the API." : "Live mode submits this exact Memory Capsule to the registry API."}</p><button className="primary" disabled={submitting} type="submit"><Upload size={18} /> {submitting ? "Publishing…" : mode === "replay" ? "Publish memory — validation only" : "Publish verified memory"}</button></div>
+  return <main className="publish-page publish-redesign">
+    <header className="publish-hero">
+      <div><p className="eyebrow">TURN EXPERIENCE INTO TEAM MEMORY</p><h1>Publish what the next engineer should know.</h1><p>Capture the judgment behind the work—not a package manifest and never a raw transcript. Pluribus handles versioning and technical metadata automatically.</p></div>
+      <div className="publish-principle"><ShieldCheck size={22} /><span><strong>Private by default</strong>Local extraction · secret removal · employee approval</span></div>
+    </header>
+    <form className="publish-workflow" onSubmit={submit} noValidate>
+      <div className="publish-main">
+        {errors.length > 0 && <div className="validation" role="alert"><strong>Please complete the memory:</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
+        <section className="knowledge-step" aria-labelledby="knowledge-heading">
+          <div className="step-heading"><span>01</span><div><h2 id="knowledge-heading">Capture the judgment</h2><p>What did experience teach you that the code or documentation does not?</p></div></div>
+          <div className="step-fields">
+            <label><span>Memory title <b>Required</b></span><input value={fields.title} onChange={(e) => update("title", e.target.value)} placeholder="Preserve the billing audit trail" /></label>
+            <label><span>One-sentence takeaway <b>Required</b></span><textarea value={fields.summary} onChange={(e) => update("summary", e.target.value)} placeholder="The durable judgment a teammate should carry into the next task." rows={2} /></label>
+            <label><span>Hidden risk or context <b>Required</b></span><textarea value={fields.problem} onChange={(e) => update("problem", e.target.value)} placeholder="Explain what can go wrong, why the obvious approach fails, and what only the team knows." rows={4} /></label>
+          </div>
+        </section>
+        <section className="knowledge-step" aria-labelledby="retrieval-heading">
+          <div className="step-heading"><span>02</span><div><h2 id="retrieval-heading">Teach Codex when to recall it</h2><p>Use the language an engineer would naturally type during a real task.</p></div></div>
+          <div className="step-fields field-grid">
+            <label><span>When should Codex recall this? <b>One scenario per line</b></span><textarea value={fields.triggers} onChange={(e) => update("triggers", e.target.value)} placeholder={"add a new invoice status\ncancel an invoice\nchange billing state"} rows={5} /></label>
+            <label><span>Search tags <b>Comma separated</b></span><textarea value={fields.tags} onChange={(e) => update("tags", e.target.value)} placeholder="billing, audit, handoff" rows={5} /></label>
+          </div>
+        </section>
+        <section className="knowledge-step" aria-labelledby="playbook-heading">
+          <div className="step-heading"><span>03</span><div><h2 id="playbook-heading">Give Codex the playbook</h2><p>Write concrete guidance that remains useful across projects, tools, and versions.</p></div></div>
+          <div className="step-fields"><label><span>What should Codex do? <b>One step per line</b></span><textarea value={fields.steps} onChange={(e) => update("steps", e.target.value)} placeholder={"Never assign invoice.status directly.\nRoute the operation through transition_invoice().\nRecord the ledger event before changing state."} rows={7} /></label></div>
+        </section>
+      </div>
+      <aside className="publish-review" aria-label="Publish checklist">
+        <div className="review-kicker"><CheckCircle2 size={18} /> READY FOR REVIEW</div>
+        <h2>Publish checklist</h2>
+        <p>A useful Memory is specific enough to retrieve and durable enough to reuse.</p>
+        <ul><li><Check size={17} /><span><strong>Judgment, not history</strong>No transcript or activity dump</span></li><li><Check size={17} /><span><strong>Natural triggers</strong>Matches how teammates ask</span></li><li><Check size={17} /><span><strong>Actionable guidance</strong>Codex knows what to do next</span></li><li><Check size={17} /><span><strong>Employee approved</strong>Alice reviewed the sanitized result</span></li></ul>
+        <div className="auto-metadata"><span>Managed automatically</span><dl><div><dt>Version</dt><dd>1.0.0</dd></div><div><dt>Code compatibility</dt><dd>Not required</dd></div><div><dt>Visibility</dt><dd>Private team</dd></div></dl></div>
+        <section className="review-evidence"><ShieldCheck size={20} /><div><strong>Evidence attached</strong><p><code>uv run pytest -q</code><br />Exit 0 · 3 passed</p></div></section>
+        <p className="publish-mode-note">{mode === "replay" ? "Replay validates the shape locally; no registry write." : "Live mode publishes this approved Memory to the team registry."}</p>
+        <button className="primary publish-submit" disabled={submitting} type="submit"><Upload size={18} /> {submitting ? "Publishing…" : mode === "replay" ? "Publish memory — validation only" : "Publish approved memory"}</button>
+      </aside>
     </form>
   </main>;
 }
