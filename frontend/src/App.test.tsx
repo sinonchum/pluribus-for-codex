@@ -64,7 +64,7 @@ describe("Codex memory marketplace", () => {
     const installedMemory = screen.getByRole("article", { name: MEMORY_TITLE });
     expect(within(installedMemory).getByText(MEMORY_TITLE)).toBeInTheDocument();
     expect(within(installedMemory).getByText(/version 1\.0\.0/i)).toBeInTheDocument();
-    expect(within(installedMemory).getByText(/installed/i)).toBeInTheDocument();
+    expect(within(installedMemory).getByRole("status", { name: "Installed" })).toBeInTheDocument();
   });
 
   it("renders the complete publisher-to-verification Usage Receipt chain", async () => {

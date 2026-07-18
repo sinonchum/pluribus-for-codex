@@ -61,7 +61,8 @@ function App() {
   const [tag, setTag] = useState("");
   const [memories, setMemories] = useState<MemoryCapsule[]>(mode === "replay" ? replaySnapshot.featured_memories : []);
   const [selected, setSelected] = useState<MemoryCapsule | null>(mode === "replay" ? replayMemory : null);
-  const [installed, setInstalled] = useState<InstallManifest[]>(mode === "replay" ? [] : []);
+  const [installedMemories, setInstalledMemories] = useState<MemoryCapsule[]>([]);
+  const [replayManifests, setReplayManifests] = useState<InstallManifest[]>([]);
   const [receipt, setReceipt] = useState<UsageReceipt | null>(mode === "replay" ? replayReceipt : null);
   const [loading, setLoading] = useState(mode === "live");
   const [error, setError] = useState("");
@@ -74,10 +75,10 @@ function App() {
     Promise.all([
       memoryApi.list({ query: query || undefined, tag: tag || undefined }),
       memoryApi.installed(),
-    ]).then(([listed, manifests]) => {
+    ]).then(([listed, installed]) => {
       if (!active) return;
       setMemories(listed);
-      setInstalled(manifests);
+      setInstalledMemories(installed);
     }).catch((reason: unknown) => {
       if (active) setError(reason instanceof Error ? reason.message : "The live registry could not be reached.");
     }).finally(() => {
@@ -118,8 +119,12 @@ function App() {
     setError("");
     setLoading(true);
     try {
-      const manifest = mode === "replay" ? replayInstallManifest : await memoryApi.install(selected.slug);
-      setInstalled((current) => current.some((item) => item.memory_id === manifest.memory_id) ? current : [...current, manifest]);
+      if (mode === "replay") {
+        setReplayManifests((current) => current.some((item) => item.memory_id === selected.id) ? current : [...current, replayInstallManifest]);
+      } else {
+        await memoryApi.install(selected.slug);
+      }
+      setInstalledMemories((current) => current.some((item) => item.id === selected.id) ? current : [...current, selected]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Installation could not be recorded.");
     } finally {
@@ -147,7 +152,7 @@ function App() {
     }
   };
 
-  const isInstalled = selected ? installed.some((item) => item.memory_id === selected.id) : false;
+  const isInstalled = selected ? installedMemories.some((item) => item.id === selected.id) : false;
   const navigate = (next: Screen) => { setError(""); setScreen(next); };
 
   return (
@@ -157,12 +162,13 @@ function App() {
           <span className="brand-mark"><Code2 size={21} /></span>
           <span>pluribus</span><em>/ memories</em>
         </button>
-        <nav aria-label="Main navigation">
-          <button className={screen === "explore" || screen === "detail" ? "active" : ""} onClick={() => navigate("explore")}>Explore</button>
-          <button className={screen === "publish" ? "active" : ""} onClick={() => navigate("publish")}>Publish</button>
-          <button className={screen === "installed" ? "active" : ""} onClick={() => navigate("installed")}>
-            My Codex <span className="nav-count">{installed.length}</span>
-          </button>
+        <nav aria-label="Primary navigation">
+          <a href="#explore" className={screen === "explore" || screen === "detail" ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate("explore"); }}>Explore</a>
+          <a href="#publish" className={screen === "publish" ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate("publish"); }}>Publish</a>
+          <a href="#installed" aria-label="My Codex" className={screen === "installed" ? "active" : ""} onClick={(event) => { event.preventDefault(); navigate("installed"); }}>
+            My Codex <span className="nav-count">{installedMemories.length}</span>
+          </a>
+          <a href="#receipt" className={screen === "receipt" ? "active" : ""} onClick={(event) => { event.preventDefault(); void showUse(); }}>Usage Receipt</a>
         </nav>
       </header>
       <ModeBanner mode={mode} />
@@ -175,7 +181,7 @@ function App() {
         <MemoryDetail memory={selected} installed={isInstalled} loading={loading} install={installMemory} back={() => navigate("explore")} openInstalled={() => navigate("installed")} />
       )}
       {screen === "publish" && <Publish mode={mode} onPublished={(memory) => { setMemories((items) => [memory, ...items]); setSelected(memory); setScreen("detail"); }} />}
-      {screen === "installed" && <Installed memories={memories} manifests={installed} mode={mode} openMemory={openMemory} run={showUse} />}
+      {screen === "installed" && <Installed memories={installedMemories} manifests={replayManifests} mode={mode} openMemory={openMemory} run={showUse} />}
       {screen === "receipt" && receipt && <ReceiptView receipt={receipt} memory={selected ?? replayMemory} mode={mode} back={() => navigate("installed")} />}
 
       <footer>
@@ -209,7 +215,7 @@ function Explore({ memories, query, setQuery, tag, setTag, loading, openMemory, 
         <span>{memories.length} {memories.length === 1 ? "result" : "results"}</span>
       </div>
       <div className="search-row">
-        <label className="search-box"><Search size={21} /><span className="sr-only">Search memories</span><input aria-label="Search memories" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search errors, methods, or tools…" /></label>
+        <label className="search-box"><Search size={21} /><span className="sr-only">Search memories</span><input type="search" aria-label="Search memories" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search errors, methods, or tools…" /></label>
         <button className="search-submit" type="button">Search registry</button>
       </div>
       <div className="tag-row" aria-label="Filter by tag">
@@ -225,7 +231,7 @@ function Explore({ memories, query, setQuery, tag, setTag, loading, openMemory, 
 }
 
 function MemoryCard({ memory, open }: { memory: MemoryCapsule; open: () => void }) {
-  return <article className="memory-card">
+  return <article className="memory-card" aria-label={memory.title}>
     <div className="card-top"><VerifiedBadge /><span className="version">v{memory.version}</span></div>
     <button className="card-title" onClick={open}>{memory.title}</button>
     <p>{memory.summary}</p>
@@ -259,7 +265,8 @@ function MemoryDetail({ memory, installed, loading, install, back, openInstalled
         <Box size={26} />
         <h2>Install this memory</h2>
         <p>Adds an explicit Pluribus-managed memory package to the project. It does not alter hidden model state.</p>
-        {installed ? <button className="installed-button" onClick={openInstalled}><Check size={19} /> Installed · View My Codex</button> : <button className="primary full" disabled={loading} onClick={install}><Download size={19} /> {loading ? "Installing…" : "Install to Codex"}</button>}
+        {installed ? <button className="installed-button" disabled><Check size={19} /> Installed</button> : <button className="primary full" disabled={loading} onClick={install}><Download size={19} /> {loading ? "Installing…" : "Install to Codex"}</button>}
+        {installed && <button className="text-action" onClick={openInstalled}>View in My Codex <ArrowRight size={16} /></button>}
         <dl><div><dt>Version</dt><dd>{memory.version}</dd></div><div><dt>Memory ID</dt><dd><code>{memory.id}</code></dd></div><div><dt>Compatibility</dt><dd>{memory.compatibility.join(" · ")}</dd></div><div><dt>Fork lineage</dt><dd>{memory.fork_of ? <><GitFork size={14} /> {memory.fork_of}</> : "Original memory"}</dd></div><div><dt>Installs</dt><dd>{memory.installs.toLocaleString()}</dd></div></dl>
       </aside>
     </div>
@@ -306,13 +313,13 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
   };
 
   return <main className="publish-page">
-    <div className="page-intro"><p className="eyebrow">PUBLISH A MEMORY CAPSULE</p><h1>Share a method, not a transcript.</h1><p>Publish a sanitized, structured debugging method with explicit verification evidence. Raw Codex conversations are never accepted.</p></div>
+    <div className="page-intro"><p className="eyebrow">SHARE A METHOD, NOT A TRANSCRIPT</p><h1>Publish Memory</h1><p>Publish a sanitized, structured debugging method with explicit verification evidence. Raw Codex conversations are never accepted.</p></div>
     <form className="publish-form" onSubmit={submit} noValidate>
       {errors.length > 0 && <div className="validation" role="alert"><strong>Please complete the capsule:</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
       <fieldset><legend>Memory identity</legend><div className="field-grid"><label><span>Title <b>Required</b></span><input value={fields.title} onChange={(e) => update("title", e.target.value)} placeholder="Fix duplicate test module collisions" /></label><label><span>Version <b>Required</b></span><input value={fields.version} onChange={(e) => update("version", e.target.value)} /></label></div><label><span>Summary <b>Required</b></span><textarea value={fields.summary} onChange={(e) => update("summary", e.target.value)} placeholder="A concise statement of the reusable method." rows={2} /></label><label><span>Problem <b>Required</b></span><textarea value={fields.problem} onChange={(e) => update("problem", e.target.value)} placeholder="Describe the failure this memory solves." rows={3} /></label></fieldset>
       <fieldset><legend>Matching & method</legend><div className="field-grid"><label><span>Trigger phrases <b>One per line</b></span><textarea value={fields.triggers} onChange={(e) => update("triggers", e.target.value)} placeholder={"import file mismatch\nduplicate test module"} rows={5} /></label><label><span>Reusable steps <b>One per line</b></span><textarea value={fields.steps} onChange={(e) => update("steps", e.target.value)} placeholder={"Confirm the collision.\nConfigure importlib mode.\nRun verification."} rows={5} /></label></div><div className="field-grid"><label><span>Tags <b>Comma separated</b></span><input value={fields.tags} onChange={(e) => update("tags", e.target.value)} placeholder="python, pytest, debugging" /></label><label><span>Compatibility <b>Comma separated</b></span><input value={fields.compatibility} onChange={(e) => update("compatibility", e.target.value)} /></label></div></fieldset>
       <section className="safe-evidence"><ShieldCheck size={24} /><div><strong>Fixed, sanitized verification</strong><p>Publisher: Bob Rivera · Command: <code>pytest -q</code> · Exit code: 0 · Evidence: 4 passed</p></div></section>
-      <div className="form-actions"><p>{mode === "replay" ? "Replay validates the complete shape locally; it does not publish to the API." : "Live mode submits this exact Memory Capsule to the registry API."}</p><button className="primary" disabled={submitting} type="submit"><Upload size={18} /> {submitting ? "Publishing…" : mode === "replay" ? "Validate replay capsule" : "Publish verified memory"}</button></div>
+      <div className="form-actions"><p>{mode === "replay" ? "Replay validates the complete shape locally; it does not publish to the API." : "Live mode submits this exact Memory Capsule to the registry API."}</p><button className="primary" disabled={submitting} type="submit"><Upload size={18} /> {submitting ? "Publishing…" : mode === "replay" ? "Publish memory — validation only" : "Publish verified memory"}</button></div>
     </form>
   </main>;
 }
@@ -320,11 +327,11 @@ function Publish({ mode, onPublished }: { mode: ExecutionMode; onPublished: (mem
 function Installed({ memories, manifests, mode, openMemory, run }: { memories: MemoryCapsule[]; manifests: InstallManifest[]; mode: ExecutionMode; openMemory: (memory: MemoryCapsule) => void; run: () => void }) {
   return <main className="installed-page">
     <div className="page-intro"><p className="eyebrow">PLURIBUS-MANAGED LOCAL PACKAGES</p><h1>My Codex</h1><p>Installed memories are explicit files Pluribus can match and inject into bounded Codex task context.</p></div>
-    {manifests.length === 0 ? <section className="empty-state large"><Box size={34} /><strong>No memories installed yet.</strong><span>Open a memory from Explore and install it to continue the demo.</span></section> : manifests.map((manifest) => {
-      const memory = memories.find((item) => item.id === manifest.memory_id) ?? replayMemory;
-      return <article className="installed-card" key={manifest.memory_id}>
+    {memories.length === 0 ? <section className="empty-state large"><Box size={34} /><strong>No memories installed yet.</strong><span>Open a memory from Explore and install it to continue the demo.</span></section> : memories.map((memory) => {
+      const manifest = manifests.find((item) => item.memory_id === memory.id);
+      return <article className="installed-card" aria-label={memory.title} key={memory.id}>
         <div className="installed-icon"><PackageCheck size={28} /></div>
-        <div className="installed-info"><div className="card-top"><span className="installed-pill"><Check size={15} /> Installed</span><span className="version">v{manifest.version}</span></div><button className="installed-title" onClick={() => openMemory(memory)}>{memory.title}</button><p>{memory.summary}</p><dl><div><dt>Local package</dt><dd><code>{manifest.install_path}</code></dd></div><div><dt>Memory ID</dt><dd><code>{manifest.memory_id}</code></dd></div><div><dt>Installed</dt><dd>{new Date(manifest.installed_at).toLocaleString()}</dd></div></dl></div>
+        <div className="installed-info"><div className="card-top"><span className="installed-pill" role="status" aria-label="Installed"><Check size={15} /> Installed</span><span className="version">Version {memory.version}</span></div><button className="installed-title" onClick={() => openMemory(memory)}>{memory.title}</button><p>{memory.summary}</p><dl><div><dt>Local package</dt><dd><code>{manifest?.install_path ?? "Recorded by Registry API; runtime package pending"}</code></dd></div><div><dt>Memory ID</dt><dd><code>{memory.id}</code></dd></div><div><dt>Installed</dt><dd>{manifest ? new Date(manifest.installed_at).toLocaleString() : "Registry install recorded"}</dd></div></dl></div>
         <div className="installed-action"><button className="primary" onClick={run}><Play size={18} /> {mode === "replay" ? "Run replay use" : "Load live use"}</button><span>{mode === "replay" ? "Uses recorded evidence" : "Loads latest API receipt"}</span></div>
       </article>;
     })}
@@ -335,16 +342,15 @@ function ReceiptView({ receipt, memory, mode, back }: { receipt: UsageReceipt; m
   const proof = [
     { label: "Publisher", value: memory.author.display_name, detail: memory.author.id, icon: <CircleUserRound /> },
     { label: "Verified memory", value: memory.title, detail: `${receipt.memory_id} · v${memory.version}`, icon: <BadgeCheck /> },
-    { label: "Consumer", value: receipt.consumer, detail: "Installed Pluribus package", icon: <Code2 /> },
-    { label: "Codex use", value: receipt.codex_reported_use ? "Reported as used" : "Not reported", detail: receipt.effect, icon: <Play /> },
+    { label: "Consumer", value: receipt.consumer, detail: `Installed package · Codex use ${receipt.codex_reported_use ? "reported" : "not reported"}`, icon: <Code2 /> },
     { label: "Changed file", value: receipt.changed_files.join(", "), detail: "Named task output", icon: <FileCheck2 /> },
-    { label: "Verification", value: receipt.verification.exit_code === 0 ? "Passed" : "Failed", detail: receipt.verification.output_excerpt, icon: <CheckCircle2 /> },
+    { label: "Verification", value: receipt.verification.exit_code === 0 ? "Passed" : "Failed", detail: `${receipt.verification.command.join(" ")} · ${receipt.verification.output_excerpt}`, icon: <CheckCircle2 /> },
   ];
   return <main className="receipt-page">
     <button className="back-link" onClick={back}><ArrowLeft size={17} /> Back to My Codex</button>
-    <header className="receipt-header"><div><p className="eyebrow">USAGE RECEIPT · {receipt.id}</p><h1>Verified proof of memory use</h1><p>Publisher, installed memory, consumer, concrete change, and coordinator verification—linked in one receipt.</p></div><span className="receipt-pass"><CheckCircle2 size={26} /> VERIFIED</span></header>
+    <header className="receipt-header"><div><p className="eyebrow">VERIFIED PROOF · {receipt.id}</p><h1>Usage Receipt</h1><p>Publisher, installed memory, consumer, concrete change, and coordinator verification—linked in one receipt.</p></div><span className="receipt-pass"><CheckCircle2 size={26} /> VERIFIED</span></header>
     <div className={`receipt-mode ${mode}`}>{mode === "replay" ? replayMetadata.label : "LIVE"}</div>
-    <ol className="proof-chain">{proof.map((item, index) => <li key={item.label}><div className="proof-number">{index + 1}</div><div className="proof-icon">{item.icon}</div><div><span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small></div>{index < proof.length - 1 && <ChevronRight className="proof-arrow" />}</li>)}</ol>
+    <ol className="proof-chain" aria-label="Usage Receipt proof chain">{proof.map((item, index) => <li key={item.label}><div className="proof-number">{index + 1}</div><div className="proof-icon">{item.icon}</div><div><span>{item.label}</span><strong>{item.value}</strong><small>{item.detail}</small></div>{index < proof.length - 1 && <ChevronRight className="proof-arrow" />}</li>)}</ol>
     <div className="receipt-evidence">
       <section><p className="eyebrow">MATCH & HANDOFF</p><dl><div><dt>Matched trigger</dt><dd><code>{receipt.matched_trigger}</code></dd></div><div><dt>Injected into Codex</dt><dd className="yes"><Check size={17} /> {String(receipt.injected_into_codex)}</dd></div><div><dt>Codex reported use</dt><dd className="yes"><Check size={17} /> {String(receipt.codex_reported_use)}</dd></div><div><dt>Effect</dt><dd>{receipt.effect}</dd></div></dl></section>
       <section className="terminal-proof"><p className="eyebrow">COORDINATOR VERIFICATION</p><div className="terminal-head"><span /><span /><span /></div><pre><b>$ {receipt.verification.command.join(" ")}</b>{"\n"}{receipt.verification.output_excerpt}{"\n\n"}<strong>Process finished with exit code {receipt.verification.exit_code}</strong></pre></section>
