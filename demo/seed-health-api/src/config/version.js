@@ -1,0 +1,1 @@
+export const applicationVersion = "1.4.0";
