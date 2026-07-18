@@ -13,6 +13,7 @@ from app.schemas.memories import (
     MemoryCapsule,
     MemoryInstall,
     MemoryStar,
+    UsageReceiptSummary,
 )
 
 router = APIRouter(tags=["memories"])
@@ -96,12 +97,47 @@ def list_installed_memories(request: Request) -> list[dict[str, object]]:
     return _database(request).list_installed_memories(DEMO_USER)
 
 
+@router.post(
+    "/api/usage-receipts",
+    response_model=UsageReceiptSummary,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_usage_receipt(
+    payload: UsageReceiptSummary, request: Request
+) -> dict[str, object]:
+    receipt = payload.model_dump(mode="json")
+    try:
+        result = _database(request).create_usage_receipt(receipt)
+    except sqlite3.IntegrityError as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "usage_receipt_already_exists"},
+        ) from error
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "memory_not_found"},
+        )
+    return result
+
+
+@router.get("/api/usage-receipts/{receipt_id}", response_model=UsageReceiptSummary)
+def get_usage_receipt(receipt_id: str, request: Request) -> dict[str, object]:
+    result = _database(request).get_usage_receipt(receipt_id)
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "usage_receipt_not_found"},
+        )
+    return result
+
+
 @router.get("/api/demo/snapshot", response_model=DemoSnapshot)
 def get_demo_snapshot(request: Request) -> dict[str, object]:
     database = _database(request)
     return {
         "featured_memories": database.list_memories(sort="featured"),
         "installed_memories": database.list_installed_memories(DEMO_USER),
-        "latest_receipt": None,
+        "latest_receipt": database.latest_usage_receipt(),
         "stats": database.registry_stats(),
     }

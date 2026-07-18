@@ -100,9 +100,18 @@ CREATE TABLE IF NOT EXISTS memory_installs (
   UNIQUE (memory_id, consumer)
 );
 
+CREATE TABLE IF NOT EXISTS usage_receipts (
+  id TEXT PRIMARY KEY,
+  memory_id TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  receipt_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_memories_slug ON memories(slug);
 CREATE INDEX IF NOT EXISTS idx_memory_installs_consumer
   ON memory_installs(consumer);
+CREATE INDEX IF NOT EXISTS idx_usage_receipts_created_at
+  ON usage_receipts(created_at DESC, id DESC);
 """
 
 
@@ -549,6 +558,44 @@ class Database:
             ).fetchall()
         return [self._memory_from_row(row) for row in rows]
 
+    def create_usage_receipt(self, receipt: dict[str, Any]) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            memory = connection.execute(
+                "SELECT id FROM memories WHERE id = ?", (receipt["memory_id"],)
+            ).fetchone()
+            if memory is None:
+                return None
+            connection.execute(
+                """
+                INSERT INTO usage_receipts (id, memory_id, receipt_json, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    receipt["id"],
+                    receipt["memory_id"],
+                    json.dumps(receipt, separators=(",", ":")),
+                    receipt["created_at"],
+                ),
+            )
+        return receipt
+
+    def get_usage_receipt(self, receipt_id: str) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT receipt_json FROM usage_receipts WHERE id = ?", (receipt_id,)
+            ).fetchone()
+        return json.loads(row["receipt_json"]) if row else None
+
+    def latest_usage_receipt(self) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT receipt_json FROM usage_receipts
+                ORDER BY created_at DESC, id DESC LIMIT 1
+                """
+            ).fetchone()
+        return json.loads(row["receipt_json"]) if row else None
+
     def registry_stats(self) -> dict[str, int]:
         with self.connect() as connection:
             row = connection.execute(
@@ -560,11 +607,14 @@ class Database:
                 FROM memories
                 """
             ).fetchone()
+            successful_uses = connection.execute(
+                "SELECT COUNT(*) AS count FROM usage_receipts"
+            ).fetchone()["count"]
         return {
             "published": row["published"],
             "verified": row["verified"],
             "installs": row["installs"],
-            "successful_uses": 0,
+            "successful_uses": successful_uses,
         }
 
     @staticmethod
