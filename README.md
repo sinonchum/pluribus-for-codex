@@ -22,17 +22,19 @@ Coordinator integrates one candidate patch
 Independent verification proves the result
 ```
 
-## One-day hackathon MVP
+## Four-person hackathon MVP
 
-The MVP deliberately uses a fixed, reliable workflow:
+The MVP deliberately uses a fixed, reliable workflow with a two-turn Tester:
 
 ```text
-Scout → Builder + Tester → Reviewer → Integrator/Verifier
+Scout → Builder + Tester planning → candidate assembly
+      → Reviewer + Tester execution → optional repair
+      → Coordinator verification
 ```
 
 - **Scout:** maps the repository and publishes evidence-backed findings.
 - **Builder:** implements the smallest compliant patch in an isolated worktree.
-- **Tester:** converts the mission into executable acceptance evidence.
+- **Tester:** plans acceptance evidence in parallel with Builder, then executes focused tests against the assembled candidate.
 - **Reviewer:** challenges the candidate diff for scope, security, and regressions.
 - **Coordinator:** owns scheduling, context synchronization, Git integration, and final verification.
 
@@ -54,13 +56,14 @@ Scout → Builder + Tester → Reviewer → Integrator/Verifier
 - React/Vite or HTMX dashboard
 - Local Codex CLI adapter
 
-## Product requirements
+## Product and implementation documents
 
-The complete product requirements document is available at [docs/PRD.md](docs/PRD.md).
+- [Product requirements](docs/PRD.md)
+- [Detailed implementation, testing, dependency, and four-person delivery plan](docs/IMPLEMENTATION_PLAN.md)
 
 ## Status
 
-Initial product specification. Implementation is intentionally scoped for a one-day hackathon build.
+Build-ready product and implementation specification. The implementation is scoped as a focused four-person hackathon vertical slice.
 
 ## License
 
