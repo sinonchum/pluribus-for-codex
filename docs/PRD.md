@@ -3,11 +3,13 @@
 | Field | Value |
 |---|---|
 | Product | Pluribus for Codex |
-| Version | 0.1 Hackathon MVP |
-| Tagline | Many Codex agents. One shared working memory. |
+| Version | 0.2 Scope-Frozen Hackathon MVP |
+| Tagline | Many Codex agents. One shared, evidence-backed working memory. |
 | Build constraint | One working day |
 | Recommended demo scale | Four Codex agents |
-| Architecture ceiling | 10–20 local workers without fundamental redesign |
+| Maximum concurrent workers | Two |
+| Full mission target | 9–12 minutes |
+| On-stage narrative | Five minutes, using a live pre-started mission plus replay fallback |
 | Product category | Local multi-agent coding orchestrator |
 
 ## 1. Executive summary
@@ -23,7 +25,7 @@ The MVP does not attempt to synchronize hidden model state or mutate a running C
 1. An agent discovers a repository fact, constraint, risk, or test result.
 2. The agent publishes a structured Knowledge Patch with evidence.
 3. The Coordinator validates and stores it.
-4. Subsequent turns receive the relevant verified patches.
+4. Subsequent turns receive relevant evidence-backed patches with explicit knowledge states.
 5. The UI shows which agents consumed each discovery.
 6. The Coordinator integrates one candidate solution and independently verifies it.
 
@@ -85,6 +87,8 @@ The one-day MVP must demonstrate that:
 6. One candidate solution is integrated into a dedicated branch.
 7. Verification commands are run by the Coordinator, not merely reported by an agent.
 8. The mission ends with a reviewable evidence report.
+9. No more than two Codex subprocesses run concurrently in the MVP.
+10. At least one Scout discovery has a recorded causal effect on a Builder decision and changed file.
 
 ### 3.2 Product goals
 
@@ -142,7 +146,7 @@ The Hive Blackboard is an append-only store of:
 - Decisions
 - Constraints
 - Risks
-- File leases
+- Role path boundaries
 - Candidate patches
 - Test results
 - Review findings
@@ -171,7 +175,7 @@ Agents do not conduct unrestricted peer-to-peer conversations. They publish stru
   "tags": ["health", "architecture", "dependency-injection"],
   "relevant_to": ["builder", "tester", "reviewer"],
   "confidence": 0.98,
-  "status": "verified",
+  "status": "source_linked",
   "created_at": "2026-07-18T11:04:20Z"
 }
 ```
@@ -192,21 +196,22 @@ Agents do not conduct unrestricted peer-to-peer conversations. They publish stru
 
 ### 5.3 Knowledge states
 
-- `proposed`
-- `verified`
+- `proposed` — an unverified agent assertion
+- `source_linked` — referenced files and line ranges exist at the recorded baseline commit
+- `execution_verified` — a Coordinator-observed command or Git state confirms the claim
 - `disputed`
 - `superseded`
 - `rejected`
 
-Only verified facts are presented as authoritative in future prompts. Proposed hypotheses are labeled explicitly.
+Source existence does not prove that an agent's interpretation is correct. Future prompts may include `source_linked` claims with their evidence and status, but only `execution_verified` claims are described as verified. Proposed hypotheses are always labeled explicitly.
 
 ### 5.4 Evidence priority
 
 When claims conflict, evidence is ranked:
 
-1. Executed test result
-2. Current source-code reference
-3. Current Git diff
+1. Coordinator-executed test result
+2. Coordinator-observed Git state or diff
+3. Source-code reference pinned to a baseline commit and content hash
 4. Repository documentation
 5. Agent interpretation
 6. Unsupported assertion
@@ -237,8 +242,8 @@ Pluribus uses evidence-weighted consensus, not majority voting. Three unsupporte
 
 **Responsibilities:**
 
-- Consume verified Scout findings.
-- Modify only leased paths in an isolated worktree.
+- Consume source-linked and execution-verified Scout findings with explicit status labels.
+- Modify only role-allowed paths in an isolated worktree.
 - Follow existing conventions.
 - Run focused checks.
 - Produce a candidate Git diff and structured handoff.
@@ -251,11 +256,11 @@ Pluribus uses evidence-weighted consensus, not majority voting. Three unsupporte
 
 **Responsibilities:**
 
-- Define acceptance criteria.
-- Locate or create tests.
-- Cover failure and edge cases.
-- Evaluate the candidate implementation.
-- Publish actual test evidence.
+- Phase A, in parallel with Builder: define acceptance criteria, locate the test framework, and create focused tests in an isolated worktree.
+- Cover one failure or edge case required by the mission.
+- Return a test patch and machine-readable acceptance criteria.
+- After integration, the Coordinator—not the Tester—executes the tests against the combined implementation and test patches.
+- Treat any test command reported by the Tester as self-reported until the Coordinator reproduces it.
 
 **Code-write permission:** Assigned test files only.
 
@@ -284,12 +289,12 @@ The Coordinator is application logic, not a free-running coding agent.
 - Start, supervise, and stop Codex processes.
 - Construct role-specific context packets.
 - Validate Knowledge Patches.
-- Manage file leases.
+- Enforce static role path boundaries and protected paths.
 - Apply selected patches.
 - Run final verification.
 - Produce the evidence report.
 
-The Coordinator owns integration and verification. Agents never merge their own work.
+The Coordinator owns integration and verification. Agents never merge their own work. It is the only process that writes to SQLite, applies patches to the integration branch, or marks execution evidence as verified.
 
 ---
 
@@ -303,11 +308,11 @@ Pluribus uses turn-boundary synchronization:
 3. Agent executes one bounded Codex turn.
 4. Agent returns a result and Knowledge Patches.
 5. Coordinator validates and stores them.
-6. Task graph and leases are updated.
+6. Task graph, path assignments, and evidence states are updated.
 7. The next turn receives the context delta.
 ```
 
-Recommended turn limits:
+Recommended full-mission turn limits (these are runtime targets, not the five-minute on-stage narrative):
 
 | Turn | Target duration |
 |---|---:|
@@ -316,6 +321,8 @@ Recommended turn limits:
 | Test design/execution | 3–5 minutes |
 | Review | 2–3 minutes |
 | Repair | 3–5 minutes |
+
+The minimum planned critical path is approximately nine minutes without repair and twelve minutes with repair. The on-stage demo therefore starts a live mission before the spoken walkthrough and retains a complete replayable evidence bundle as a fallback. The product must never present a replay as a currently executing worker.
 
 ### 7.1 Context packet
 
@@ -337,7 +344,7 @@ Builder: implement the smallest compliant patch.
 - Do not add dependencies.
 - Do not edit migrations.
 
-## Files leased to you
+## Files allowed for this role
 - `src/routes/health.ts`
 - `src/services/health.ts`
 
@@ -347,7 +354,7 @@ Return changed files, commands, test results, discoveries, and risks.
 
 ### 7.2 Relevance filtering
 
-All active constraints, accepted decisions, and critical risks are included. Other patches are ranked using deterministic signals:
+All active constraints, accepted decisions, and critical risks are included. Every packet also records the exact patch IDs delivered to the worker. Other patches are ranked using deterministic signals:
 
 ```text
 score = role relevance
@@ -362,7 +369,7 @@ Embeddings are unnecessary for the one-day MVP.
 
 ---
 
-## 8. Git isolation and file leases
+## 8. Git isolation and path boundaries
 
 Every writing agent runs in an isolated worktree:
 
@@ -370,7 +377,7 @@ Every writing agent runs in an isolated worktree:
 worktrees/
 ├── builder-1/
 ├── tester-1/
-└── repair-1/
+└── repair-1/   # created only when the optional repair round runs
 ```
 
 Each worktree uses a dedicated branch:
@@ -381,16 +388,16 @@ hive/mission-001/tester-1
 hive/mission-001/repair-1
 ```
 
-### Lease rules
+### MVP path-boundary rules
 
 - Many agents may read the same path.
-- Only one agent may hold a write lease on a file at a time.
-- The Coordinator checks actual Git changes against the lease.
-- Changes outside leased paths are flagged and rejected by default.
-- Expired leases are automatically released.
+- A static role configuration defines allowed write globs for Builder and Tester.
+- The Coordinator compares actual Git changes against those globs before integration.
+- Changes outside allowed paths are flagged and rejected by default.
 - Protected paths can never be integrated automatically.
+- Runtime file leasing and lease visualization are P1; isolated worktrees plus deterministic integration are sufficient for the fixed MVP.
 
-If two tasks need the same file, the second task waits. After the first patch is integrated, the second agent receives the updated branch and current Hive context.
+If both writing agents modify the same path or patch application conflicts, the mission ends as `requires_human_review`. After a patch is integrated, any optional repair worker starts from the current integration commit and receives the latest Hive context.
 
 ---
 
@@ -399,7 +406,8 @@ If two tasks need the same file, the second task waits. After the first patch is
 The fixed MVP pipeline is:
 
 ```text
-Scout → Builder + Tester → Reviewer → Integrate → Verify
+Scout → Builder + Tester Phase A → Integrate tests + implementation
+      → Coordinator test execution → Reviewer → optional Repair → Final Verify
 ```
 
 Detailed algorithm:
@@ -412,25 +420,30 @@ validate_and_publish_scout_findings()
 
 run_in_parallel(
     builder_with_hive_context,
-    tester_with_hive_context,
+    tester_phase_a_with_hive_context,
+    max_concurrency=2,
 )
+
+apply_tester_patch_to_integration_branch()
+apply_builder_patch_to_integration_branch()
+run_coordinator_focused_verification()
 
 run_reviewer(
     objective,
     verified_hive_memory,
-    builder_diff,
+    integrated_diff,
     tester_acceptance_criteria,
+    coordinator_test_evidence,
 )
 
 if reviewer_requests_repair:
-    run_one_bounded_repair_turn()
+    run_one_bounded_repair_turn_from_integration_commit()
 
-apply_selected_patches_to_integration_branch()
 run_coordinator_verification()
 generate_evidence_report()
 ```
 
-Scout runs first because its findings reduce duplicated exploration. Builder and Tester then run concurrently. Reviewer runs when a real candidate diff and acceptance criteria exist.
+Scout runs first because its findings reduce duplicated exploration. Builder and Tester Phase A then run concurrently in isolated worktrees. The Coordinator applies the Tester patch first and the Builder patch second, runs focused checks, and gives the Reviewer the combined diff plus real test evidence. Any patch-application conflict or unauthorized edit ends as `requires_human_review`; the MVP does not attempt semantic conflict resolution.
 
 ---
 
@@ -444,7 +457,8 @@ The user can select a Git repository, enter an objective, choose 2–6 agents, s
 
 - Non-Git directories are rejected.
 - Starting commit, branch, and dirty state are recorded.
-- Existing changes produce a visible warning.
+- Dirty repositories are rejected by default (`allow_dirty_repository: false`).
+- The user may explicitly use a disposable repository copy, but local uncommitted changes are never silently excluded from a mission.
 - A unique mission identifier is created.
 
 ### FR-02 — Create specialized workers
@@ -480,25 +494,27 @@ The user can select a Git repository, enter an objective, choose 2–6 agents, s
 
 - Structured Knowledge Patches are parsed from agent output.
 - Every patch records author, timestamp, and status.
-- Referenced files are checked for existence.
+- Referenced files, line ranges, baseline commit, and content hash are checked.
 - Unsupported claims remain proposed.
-- Verified patches can enter future context packets.
+- Source-linked patches retain that label; only Coordinator-observed execution evidence becomes `execution_verified`.
+- Context packets record the exact patch IDs delivered to each worker.
 
 ### FR-06 — Demonstrate synchronization
 
 **Acceptance criteria:**
 
-- New turns receive the latest relevant verified patches.
-- The UI records which worker consumed each patch.
+- New turns receive the latest relevant `source_linked` and `execution_verified` patches with their status labels.
+- The UI distinguishes `delivered_to` from `consumed_by`.
+- Workers return `consumed_patch_ids` plus a structured explanation of how each consumed patch affected a decision or changed file.
 - Superseded findings are removed or labeled.
-- At least two patches are reused across workers in the demo.
+- At least two patches are delivered across workers and at least one has a visible causal effect on the final implementation.
 
 ### FR-07 — Enforce scope
 
 **Acceptance criteria:**
 
 - Protected paths cannot be integrated automatically.
-- Changes outside a worker's lease are visible.
+- Changes outside a worker's configured path boundary are visible.
 - Manifest changes can be flagged as dependency additions.
 - Violating patches are rejected or require explicit human acceptance.
 
@@ -516,7 +532,8 @@ The user can select a Git repository, enter an objective, choose 2–6 agents, s
 **Acceptance criteria:**
 
 - Only the Coordinator modifies the integration branch.
-- Selected patches are applied and failures are reported.
+- Tester patch is applied before Builder patch; failures are reported and produce `requires_human_review`.
+- Reviewer evaluates the combined integration diff, not an isolated Builder diff.
 - The original branch remains recoverable.
 
 ### FR-10 — Verify independently
@@ -525,6 +542,8 @@ The user can select a Git repository, enter an objective, choose 2–6 agents, s
 
 - Required commands run on the integrated result.
 - Commands, exit codes, and output are stored.
+- Verification commands are represented as executable-plus-argument arrays and run without `shell=True`.
+- The UI shows the exact command and working directory before execution.
 - Success requires all required checks to pass.
 - Agent self-reports cannot replace Coordinator evidence.
 
@@ -559,14 +578,19 @@ Default configuration:
 
 ```yaml
 agents: 4
+max_concurrency: 2
 timeout_minutes: 12
 repair_rounds: 1
 roles: [scout, builder, tester, reviewer]
+allow_dirty_repository: false
 protected_paths: [.env, .git/**, migrations/**]
-verification: [npm test]
+verification:
+  - executable: npm
+    args: [test]
+    timeout_seconds: 120
 ```
 
-Primary action: **Launch Hive**.
+Primary action: **Launch Hive**. Before launch, the UI displays the baseline commit, clean/dirty status, Codex preflight result, worktree plan, exact verification commands, and maximum concurrency.
 
 ### 11.2 Mission Control
 
@@ -682,6 +706,8 @@ CREATE TABLE knowledge_patches (
   relevant_to_json TEXT,
   confidence REAL,
   status TEXT NOT NULL,
+  baseline_commit TEXT NOT NULL,
+  consumed_by_json TEXT,
   created_at TEXT NOT NULL
 );
 
@@ -695,7 +721,7 @@ CREATE TABLE events (
 );
 ```
 
-Additional tables may store tasks, leases, candidate patches, and verification runs.
+Additional tables may store tasks, role path assignments, candidate patches, and verification runs.
 
 ---
 
@@ -718,11 +744,19 @@ Mission creation example:
 
 ```json
 {
-  "repository_path": "C:/projects/demo-api",
+  "repository_path": "/path/to/demo-api",
   "objective": "Add a detailed health endpoint with tests.",
   "agent_count": 4,
+  "max_concurrency": 2,
+  "allow_dirty_repository": false,
   "protected_paths": [".env", "src/auth/**"],
-  "verification_commands": ["npm test"]
+  "verification_commands": [
+    {
+      "executable": "npm",
+      "args": ["test"],
+      "timeout_seconds": 120
+    }
+  ]
 }
 ```
 
@@ -737,8 +771,16 @@ Agents should end with a machine-readable block:
   "status": "completed",
   "summary": "Implemented detailed health endpoint.",
   "changed_files": ["src/routes/health.ts"],
-  "commands_run": [
+  "self_reported_commands": [
     {"command": "npm test -- health", "exit_code": 0}
+  ],
+  "consumed_patch_ids": ["kp_018"],
+  "knowledge_usage": [
+    {
+      "patch_id": "kp_018",
+      "effect": "Reused the existing HealthService instead of creating a second health abstraction.",
+      "changed_files": ["src/routes/health.ts"]
+    }
   ],
   "knowledge_patches": [
     {
@@ -763,7 +805,19 @@ Agents should end with a machine-readable block:
 }
 ```
 
-If JSON parsing fails, Pluribus preserves raw output, derives changed files from Git, marks the handoff unstructured, and does not trust claimed tests.
+If JSON parsing fails, Pluribus preserves raw output, derives changed files from Git, marks the handoff unstructured, and does not trust claimed tests. Even when parsing succeeds, `self_reported_commands` remain unverified until reproduced by the Coordinator.
+
+### 15.1 Codex adapter preflight
+
+Before a mission can launch, the adapter must prove that:
+
+- A configured Codex executable exists.
+- Authentication is usable through one bounded probe.
+- A minimal non-writing Codex turn exits successfully.
+- Git can create and remove a temporary worktree.
+- Process stdout, stderr, exit code, duration, timeout, and cancellation are observable.
+
+The adapter stores raw output separately from the parsed handoff. A failed worker never crashes the Coordinator, and a successful exit code does not imply that the requested task succeeded.
 
 ---
 
@@ -774,7 +828,7 @@ If JSON parsing fails, Pluribus preserves raw output, derives changed files from
 - Store stderr and exit code.
 - Preserve worktree and diff.
 - Mark task failed.
-- Release leases.
+- Preserve the failed worktree for inspection and release its path assignment.
 - Continue if the task is noncritical.
 
 ### Timeout
@@ -792,7 +846,7 @@ If JSON parsing fails, Pluribus preserves raw output, derives changed files from
 
 ### Failed verification
 
-- Publish the failure as a verified test result.
+- Publish the failure as an `execution_verified` test result.
 - Permit one bounded repair turn.
 - Finish as failed or partially verified if checks still fail.
 
@@ -809,11 +863,14 @@ The MVP is a localhost developer tool, not a secure sandbox. Codex processes can
 Minimum protections:
 
 - Bind the API to localhost.
+- Default to Codex sandboxed execution; never require `--yolo` for the demo.
 - Do not expose `.env` content in the UI.
 - Redact obvious tokens from logs.
 - Block `.git/**` edits.
 - Support user-defined protected paths.
 - Set process timeouts.
+- Limit concurrent Codex subprocesses to two.
+- Execute verification commands as argument arrays without a shell.
 - Preserve the starting commit.
 - Require explicit action before changing the original branch.
 
@@ -830,20 +887,23 @@ Production versions require containers or VMs, resource limits, network policy, 
 | Participating Codex workers | At least 4 |
 | Writing workers isolated | 100% |
 | Shared findings propagated | At least 2 |
+| Causally demonstrated knowledge reuse | At least 1 |
 | Evidence-backed findings | At least 80% |
 | Protected-path violations integrated | 0 |
 | Coordinator verification | Executed |
 | Live dashboard | Working |
-| Deterministic demo duration | Under 5 minutes |
+| Full mission runtime | 9–12 minute target |
+| On-stage narrative | Under 5 minutes |
+| Consecutive successful rehearsals | 3 |
 
 ### Core product metric
 
 **Cross-agent knowledge reuse rate**
 
 ```text
-Knowledge Patches consumed by another worker
-────────────────────────────────────────────
-Total verified Knowledge Patches
+Knowledge Patches with recorded causal use by another worker
+────────────────────────────────────────────────────────────
+Total source-linked or execution-verified Knowledge Patches
 ```
 
 This proves that Pluribus is more than a parallel process launcher.
@@ -896,7 +956,7 @@ Additional metrics:
 
 - Parse Knowledge Patches.
 - Validate file evidence.
-- Implement proposed/verified states.
+- Implement proposed/source-linked/execution-verified states.
 - Compile role-specific context packets.
 - Track patch consumption.
 
@@ -904,22 +964,21 @@ Additional metrics:
 
 ### Hour 6.5–8 — Orchestration and proof
 
-- Implement `Scout → Builder + Tester → Reviewer`.
-- Add leases and protected paths.
+- Implement `Scout → Builder + Tester Phase A → Integrate → Reviewer`.
+- Add fixed role path boundaries and protected-path enforcement.
 - Capture candidate diffs.
-- Apply selected patch to the integration branch.
+- Apply Tester patch, then Builder patch, to the integration branch.
 - Run verification and one optional repair turn.
 
 **Exit criterion:** A complete mission produces a real verification result.
 
 ### Hour 8–10 — Mission Control
 
-Build four panels:
+Build three panels:
 
 1. Agent roster
-2. Task graph
-3. Hive memory stream
-4. Diff and evidence
+2. Hive memory and causal knowledge flow
+3. Integrated diff and evidence
 
 **Exit criterion:** An observer understands what the collective is doing without reading terminal logs.
 
@@ -943,24 +1002,28 @@ Prepare and rehearse a 90-second pitch and a five-minute demo. Add no new featur
 
 ### P0 — Must ship
 
-- Mission creation
+- One fixed demo repository and one fixed mission
 - Four fixed roles
-- Codex subprocess execution
-- Git worktree isolation
-- Knowledge Patches
-- Context propagation
-- Live agent status
-- Candidate diff
-- Coordinator verification
-- Evidence report
+- Maximum concurrency of two
+- Codex adapter preflight and bounded subprocess execution
+- Builder and Tester isolated with Git worktrees
+- Three Knowledge Patch types: `repository_fact`, `constraint`, and `test_result`
+- Source-linked evidence and explicit `consumed_patch_ids`
+- At least one visible causal knowledge-reuse event
+- Fixed integration order: Tester patch, then Builder patch
+- Protected-path enforcement from a static configuration
+- One Coordinator-run verification command
+- Three-panel live dashboard
+- JSON and HTML evidence receipt
 
 ### P1 — Only after P0 works
 
-- File lease visualization
-- Protected-path enforcement
+- Generic repository selector
 - One repair round
 - Conflict display
 - Knowledge-consumption animation
+- Runtime file leases
+- Replay controls
 
 ### P2 — Post-hackathon
 
@@ -991,7 +1054,7 @@ Use a small web API containing:
 
 ### Mission
 
-> Add an endpoint that reports application version, uptime, and database health. Reuse existing health infrastructure, add degraded-state tests, and update API documentation. Do not change authentication or add dependencies.
+> Add `GET /health/details` that reports application version, uptime, and a sanitized database status. Reuse the existing `HealthService`, add one degraded-state test, and do not change authentication or add dependencies.
 
 ### Five-minute narrative
 
@@ -1003,6 +1066,8 @@ Use a small web API containing:
 6. **Collective correction:** Reviewer catches unsafe exposure of a raw database exception.
 7. **Repair:** A bounded repair turn consumes the shared risk and corrects it.
 8. **Proof:** Coordinator runs tests and confirms protected files are unchanged.
+
+The live mission is started before the spoken walkthrough. If network, authentication, or model latency prevents completion on stage, Mission Control switches to an explicitly labeled replay backed by the stored raw logs, process metadata, diffs, and verification output from a prior real run.
 
 The key demonstration is causal:
 
@@ -1022,13 +1087,39 @@ Coordinator proves completion
 
 ---
 
-## 22. Risks and mitigations
+## 22. Judge proof matrix
+
+The demo must make every primary product claim inspectable:
+
+### Claim 1 — Four real Codex workers participated
+
+**Proof:** four unique worker IDs, role prompts, process records, raw logs, durations, and exit codes.
+
+### Claim 2 — Knowledge propagated across agents
+
+**Proof:** a Scout-authored patch ID appears in a later Builder context packet, the Builder returns that ID in `consumed_patch_ids`, and `knowledge_usage` links it to an implementation decision and changed file.
+
+### Claim 3 — Writing agents were isolated
+
+**Proof:** separate worktree paths and branches for Builder and Tester, plus an unchanged source-branch commit.
+
+### Claim 4 — Scope was enforced
+
+**Proof:** the Coordinator compares the actual diff against role path boundaries and protected paths before integration.
+
+### Claim 5 — The result was independently verified
+
+**Proof:** the Coordinator records the integration commit, executable and argument list, working directory, exit code, duration, and output hash. Agent self-reports are shown separately and never substitute for this evidence.
+
+---
+
+## 23. Risks and mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Codex turns run too long | Demo stalls | Bounded turns and prepared repository |
 | Agent output is malformed | Parser fails | Raw fallback and Git-derived truth |
-| Edits overlap | Merge conflict | Worktrees and single-writer leases |
+| Edits overlap | Merge conflict | Isolated worktrees, static path boundaries, and deterministic integration |
 | Memory becomes noisy | Poor agent performance | Verification, filtering, and hard limits |
 | Hallucination propagates | Collective error | Evidence checks and knowledge states |
 | API cost becomes excessive | Weak viability | Four fixed roles and compact context |
@@ -1036,10 +1127,12 @@ Coordinator proves completion
 | Reviewer loops forever | No completion | Maximum one repair round |
 | UI consumes the day | Backend unfinished | Backend-first development and SSE |
 | Product appears to be a process launcher | Weak novelty | Show one agent's finding changing another's work |
+| Codex authentication or quota fails | Workers cannot start | Run adapter preflight and retain an explicitly labeled replay fallback |
+| Too many concurrent workers | Rate limits or local contention | Four participants, maximum concurrency of two |
 
 ---
 
-## 23. Roadmap
+## 24. Roadmap
 
 ### Phase 1 — Hackathon MVP
 
@@ -1049,7 +1142,7 @@ Coordinator proves completion
 - Git isolation
 - Evidence report
 
-**Exit criterion:** A complete mission succeeds consistently in under five demo minutes.
+**Exit criterion:** A complete mission succeeds consistently within the 9–12 minute runtime target, and its on-stage narrative fits within five minutes.
 
 ### Phase 2 — Adaptive Hive
 
@@ -1085,7 +1178,7 @@ Coordinator proves completion
 
 ---
 
-## 24. Positioning
+## 25. Positioning
 
 Do not describe Pluribus as:
 
@@ -1093,7 +1186,7 @@ Do not describe Pluribus as:
 
 That is easy to reproduce. The product claim is:
 
-> **Pluribus turns independent Codex processes into an evidence-sharing engineering collective. Each agent works in isolation, while discoveries, constraints, risks, and test results propagate through shared verified memory.**
+> **Pluribus turns independent Codex processes into an evidence-sharing engineering collective. Each agent works in isolation, while evidence-backed discoveries, constraints, risks, and test results propagate through a shared blackboard and the Coordinator independently verifies the integrated result.**
 
 The defensible idea is not agent count. It is the combination of:
 
@@ -1105,3 +1198,7 @@ The defensible idea is not agent count. It is the combination of:
 - Independent verification
 
 That is a credible, feasible implementation of a Codex hive mind—and a focused one-day hackathon product.
+
+The shortest memorable pitch is:
+
+> **Codex agents do not need a group chat. They need a shared evidence ledger.**
