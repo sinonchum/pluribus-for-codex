@@ -34,6 +34,20 @@ RECEIPT_KEYS = {
     "created_at",
 }
 VERIFICATION_KEYS = {"command", "exit_code", "output_excerpt"}
+REQUIRED_RECEIPT_TEXT_FIELDS = (
+    "id",
+    "memory_id",
+    "consumer",
+    "matched_trigger",
+    "effect",
+    "created_at",
+)
+
+
+def _require_replay_text(value: object) -> str:
+    if type(value) is not str or not value.strip():
+        raise ValueError("Replay receipt required proof is missing")
+    return value
 
 
 def _validate_snapshot(snapshot: Any) -> dict[str, Any]:
@@ -43,15 +57,20 @@ def _validate_snapshot(snapshot: Any) -> dict[str, Any]:
     receipt = snapshot["latest_receipt"]
     if not isinstance(receipt, dict) or set(receipt) != RECEIPT_KEYS:
         raise ValueError("Replay receipt does not match the frozen Usage Receipt")
+    for field in REQUIRED_RECEIPT_TEXT_FIELDS:
+        _require_replay_text(receipt[field])
+    try:
+        created_at = datetime.fromisoformat(
+            receipt["created_at"].replace("Z", "+00:00")
+        )
+    except ValueError as error:
+        raise ValueError("Replay receipt required proof is invalid") from error
+    if created_at.tzinfo is None:
+        raise ValueError("Replay receipt required proof is invalid")
     if receipt["injected_into_codex"] is not True:
         raise ValueError("Replay receipt must prove Codex context injection")
     if receipt["codex_reported_use"] is not True:
         raise ValueError("Replay receipt must prove Codex-reported use")
-    if (
-        not isinstance(receipt["matched_trigger"], str)
-        or not receipt["matched_trigger"].strip()
-    ):
-        raise ValueError("Replay receipt required proof is missing")
     if receipt["changed_files"] != ["pyproject.toml"]:
         raise ValueError("Replay receipt must identify pyproject.toml")
 
@@ -60,13 +79,9 @@ def _validate_snapshot(snapshot: Any) -> dict[str, Any]:
         raise ValueError("Replay verification does not match the frozen contract")
     if verification["command"] != ["pytest", "-q"]:
         raise ValueError("Replay verification command must be pytest -q")
-    if verification["exit_code"] != 0:
-        raise ValueError("Replay verification must pass")
-    if (
-        not isinstance(verification["output_excerpt"], str)
-        or not verification["output_excerpt"].strip()
-    ):
-        raise ValueError("Replay verification required proof is missing")
+    if type(verification["exit_code"]) is not int or verification["exit_code"] != 0:
+        raise ValueError("Replay verification does not match the frozen contract")
+    _require_replay_text(verification["output_excerpt"])
     return snapshot
 
 
