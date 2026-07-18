@@ -1,4 +1,10 @@
-import type { DemoSnapshot, InstallManifest, MemoryCapsule, UsageReceipt } from "./contracts";
+import type {
+  DemoSnapshot,
+  MemoryCapsule,
+  MemoryInstall,
+  MemoryStar,
+  UsageReceipt,
+} from "./contracts";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -30,10 +36,10 @@ export const memoryApi = {
     request<MemoryCapsule>("/api/memories", { method: "POST", body: JSON.stringify(capsule) }),
   detail: (slug: string) => request<MemoryCapsule>(`/api/memories/${encodeURIComponent(slug)}`),
   star: (slug: string) =>
-    request<MemoryCapsule>(`/api/memories/${encodeURIComponent(slug)}/star`, { method: "POST" }),
+    request<MemoryStar>(`/api/memories/${encodeURIComponent(slug)}/star`, { method: "POST" }),
   install: (slug: string) =>
-    request<InstallManifest>(`/api/memories/${encodeURIComponent(slug)}/install`, { method: "POST" }),
-  installed: () => request<InstallManifest[]>("/api/installed"),
+    request<MemoryInstall>(`/api/memories/${encodeURIComponent(slug)}/install`, { method: "POST" }),
+  installed: () => request<MemoryCapsule[]>("/api/installed"),
   createReceipt: (receipt: UsageReceipt) =>
     request<UsageReceipt>("/api/usage-receipts", { method: "POST", body: JSON.stringify(receipt) }),
   receipt: (id: string) => request<UsageReceipt>(`/api/usage-receipts/${encodeURIComponent(id)}`),

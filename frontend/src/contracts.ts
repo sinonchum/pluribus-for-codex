@@ -1,5 +1,5 @@
 export type ExecutionMode = "live" | "replay";
-export type MemoryStatus = "verified" | "unverified";
+export type MemoryStatus = "draft" | "verified";
 
 export interface Author {
   id: string;
@@ -42,6 +42,22 @@ export interface InstallManifest {
   installed_at: string;
 }
 
+export interface MemoryStar {
+  memory_id: string;
+  slug: string;
+  starred: boolean;
+  stars: number;
+}
+
+export interface MemoryInstall {
+  id: string;
+  memory_id: string;
+  slug: string;
+  version: string;
+  consumer: string;
+  installed_at: string;
+}
+
 export interface UsageReceiptVerification {
   command: string[];
   exit_code: number;
@@ -70,7 +86,7 @@ export interface DemoStats {
 
 export interface DemoSnapshot {
   featured_memories: MemoryCapsule[];
-  installed_memories: InstallManifest[];
+  installed_memories: MemoryCapsule[];
   latest_receipt: UsageReceipt | null;
   stats: DemoStats;
 }
