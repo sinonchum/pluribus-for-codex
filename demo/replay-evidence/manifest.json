@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "recorded_local_run",
+  "recorded_at": "2026-07-18T11:05:00Z",
+  "baseline_commit": "ec4889b71f82f32a9b73c957adf004e25ab9af97",
+  "objective": "Add GET /health/details with version, uptime, and sanitized database status.",
+  "command": {
+    "executable": "npm",
+    "args": [
+      "test"
+    ],
+    "working_directory": "<recorded-worktree>",
+    "exit_code": 0
+  },
+  "protected_paths": [
+    ".env",
+    ".git/**",
+    "src/middleware/auth.js"
+  ],
+  "protected_paths_unchanged": true,
+  "changed_files": [
+    "src/server.js",
+    "src/services/health.js",
+    "test/health.test.js"
+  ]
+}
