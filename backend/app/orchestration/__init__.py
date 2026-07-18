@@ -29,6 +29,12 @@ from .models import (
     WorkerStatus,
     Workspace,
 )
+from .persistence import (
+    DatabaseEventSink,
+    DatabaseMissionStore,
+    InMemoryMissionStore,
+    MissionPersistenceError,
+)
 from .protocols import (
     EventSink,
     GitIntegrator,
@@ -46,6 +52,8 @@ __all__ = [
     "AssemblyConflictError",
     "EventKind",
     "EventSink",
+    "DatabaseEventSink",
+    "DatabaseMissionStore",
     "FixedMissionController",
     "GitIntegrator",
     "InvalidMissionStartError",
@@ -55,9 +63,11 @@ __all__ = [
     "MissionControllerError",
     "MissionEvent",
     "MissionNotFoundError",
+    "MissionPersistenceError",
     "MissionResult",
     "MissionState",
     "MissionStore",
+    "InMemoryMissionStore",
     "ReportBuilder",
     "ReportRequest",
     "ReviewDecision",
