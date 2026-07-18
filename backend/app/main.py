@@ -6,8 +6,10 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.memories import router as memories_router
 from app.api.missions import router as missions_router
 from app.db import Database
+from app.registry import seed_registry
 from app.services import MissionController
 
 
@@ -20,6 +22,7 @@ def create_app(
     )
     database = Database(resolved_database_path)
     database.initialize()
+    seed_registry(database)
 
     application = FastAPI(title="Pluribus for Codex API", version="0.1.0")
     application.add_middleware(
@@ -30,6 +33,7 @@ def create_app(
     )
     application.state.database = database
     application.state.mission_controller = mission_controller
+    application.include_router(memories_router)
     application.include_router(missions_router)
 
     @application.get("/health")

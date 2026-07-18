@@ -72,6 +72,37 @@ CREATE INDEX IF NOT EXISTS idx_events_mission_id_id
   ON events(mission_id, id);
 CREATE INDEX IF NOT EXISTS idx_patches_mission_id
   ON knowledge_patches(mission_id);
+
+CREATE TABLE IF NOT EXISTS memories (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  capsule_json TEXT NOT NULL,
+  searchable_text TEXT NOT NULL,
+  status TEXT NOT NULL,
+  stars INTEGER NOT NULL DEFAULT 0 CHECK (stars >= 0),
+  installs INTEGER NOT NULL DEFAULT 0 CHECK (installs >= 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS memory_stars (
+  memory_id TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (memory_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS memory_installs (
+  id TEXT PRIMARY KEY,
+  memory_id TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+  consumer TEXT NOT NULL,
+  version TEXT NOT NULL,
+  installed_at TEXT NOT NULL,
+  UNIQUE (memory_id, consumer)
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_slug ON memories(slug);
+CREATE INDEX IF NOT EXISTS idx_memory_installs_consumer
+  ON memory_installs(consumer);
 """
 
 
@@ -345,6 +376,203 @@ class Database:
                 created_at=completed_at,
             )
         return self.get_mission(mission_id)
+
+    def create_memory(
+        self, capsule: dict[str, Any], *, ignore_existing: bool = False
+    ) -> bool:
+        searchable_text = " ".join(
+            (
+                capsule["title"],
+                capsule["summary"],
+                capsule["problem"],
+                *capsule["triggers"],
+                *capsule["tags"],
+            )
+        ).casefold()
+        insert = "INSERT OR IGNORE" if ignore_existing else "INSERT"
+        with self.connect() as connection:
+            cursor = connection.execute(
+                f"""
+                {insert} INTO memories (
+                  id, slug, capsule_json, searchable_text, status,
+                  stars, installs, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    capsule["id"],
+                    capsule["slug"],
+                    json.dumps(capsule, separators=(",", ":")),
+                    searchable_text,
+                    capsule["status"],
+                    capsule["stars"],
+                    capsule["installs"],
+                    capsule["created_at"],
+                ),
+            )
+        return cursor.rowcount == 1
+
+    def get_memory(self, slug: str) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM memories WHERE slug = ?", (slug,)
+            ).fetchone()
+        return self._memory_from_row(row) if row else None
+
+    def list_memories(
+        self,
+        *,
+        query: str | None = None,
+        tag: str | None = None,
+        sort: str = "featured",
+    ) -> list[dict[str, Any]]:
+        order_by = {
+            "featured": "stars DESC, installs DESC, created_at DESC",
+            "stars": "stars DESC, installs DESC, created_at DESC",
+            "installs": "installs DESC, stars DESC, created_at DESC",
+            "newest": "created_at DESC, stars DESC",
+        }.get(sort, "stars DESC, installs DESC, created_at DESC")
+        clauses: list[str] = []
+        parameters: list[str] = []
+        if query and query.strip():
+            escaped_query = (
+                query.strip()
+                .casefold()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            clauses.append("searchable_text LIKE ? ESCAPE '\\'")
+            parameters.append(f"%{escaped_query}%")
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self.connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM memories {where} ORDER BY {order_by}", parameters
+            ).fetchall()
+        memories = [self._memory_from_row(row) for row in rows]
+        if tag and tag.strip():
+            normalized_tag = tag.strip().casefold()
+            memories = [
+                memory
+                for memory in memories
+                if normalized_tag in {item.casefold() for item in memory["tags"]}
+            ]
+        return memories
+
+    def star_memory(
+        self, *, slug: str, user_id: str, created_at: str
+    ) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            memory = connection.execute(
+                "SELECT id, slug FROM memories WHERE slug = ?", (slug,)
+            ).fetchone()
+            if memory is None:
+                return None
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO memory_stars (memory_id, user_id, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (memory["id"], user_id, created_at),
+            )
+            if cursor.rowcount == 1:
+                connection.execute(
+                    "UPDATE memories SET stars = stars + 1 WHERE id = ?",
+                    (memory["id"],),
+                )
+            stars = connection.execute(
+                "SELECT stars FROM memories WHERE id = ?", (memory["id"],)
+            ).fetchone()["stars"]
+        return {
+            "memory_id": memory["id"],
+            "slug": memory["slug"],
+            "starred": True,
+            "stars": stars,
+        }
+
+    def install_memory(
+        self,
+        *,
+        slug: str,
+        install_id: str,
+        consumer: str,
+        installed_at: str,
+    ) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            memory = connection.execute(
+                "SELECT id, slug, capsule_json FROM memories WHERE slug = ?", (slug,)
+            ).fetchone()
+            if memory is None:
+                return None
+            capsule = json.loads(memory["capsule_json"])
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO memory_installs (
+                  id, memory_id, consumer, version, installed_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    install_id,
+                    memory["id"],
+                    consumer,
+                    capsule["version"],
+                    installed_at,
+                ),
+            )
+            if cursor.rowcount == 1:
+                connection.execute(
+                    "UPDATE memories SET installs = installs + 1 WHERE id = ?",
+                    (memory["id"],),
+                )
+            row = connection.execute(
+                """
+                SELECT * FROM memory_installs
+                WHERE memory_id = ? AND consumer = ?
+                """,
+                (memory["id"], consumer),
+            ).fetchone()
+        if row is None:  # pragma: no cover - defensive invariant
+            raise RuntimeError("install disappeared after insertion")
+        result = dict(row)
+        result["slug"] = memory["slug"]
+        return result
+
+    def list_installed_memories(self, consumer: str) -> list[dict[str, Any]]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT memories.* FROM memories
+                JOIN memory_installs ON memory_installs.memory_id = memories.id
+                WHERE memory_installs.consumer = ?
+                ORDER BY memory_installs.installed_at DESC
+                """,
+                (consumer,),
+            ).fetchall()
+        return [self._memory_from_row(row) for row in rows]
+
+    def registry_stats(self) -> dict[str, int]:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                  COUNT(*) AS published,
+                  SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) AS verified,
+                  COALESCE(SUM(installs), 0) AS installs
+                FROM memories
+                """
+            ).fetchone()
+        return {
+            "published": row["published"],
+            "verified": row["verified"],
+            "installs": row["installs"],
+            "successful_uses": 0,
+        }
+
+    @staticmethod
+    def _memory_from_row(row: sqlite3.Row) -> dict[str, Any]:
+        capsule = json.loads(row["capsule_json"])
+        capsule["stars"] = row["stars"]
+        capsule["installs"] = row["installs"]
+        return capsule
 
     @staticmethod
     def _insert_event(
