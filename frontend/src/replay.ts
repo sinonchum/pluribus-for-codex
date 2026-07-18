@@ -1,28 +1,74 @@
-import type { MissionSnapshot } from "./contracts";
+import type { DemoSnapshot, InstallManifest, MemoryCapsule, UsageReceipt } from "./contracts";
 
-export const replayMission: MissionSnapshot = {
-  id: "recorded_run_20260718", status: "verified", objective: "Add GET /health/details with version, uptime, and sanitized database status.",
-  repository: "<recorded-worktree>", baseline: "ec4889b71f82f32a9b73c957adf004e25ab9af97", startedAt: "2026-07-18T11:05:00Z", integrationBranch: "recorded/integration",
-  stages: ["Scout", "Build + Test", "Integrate", "Review", "Verify"].map(label => ({ label, state: "done" as const })),
-  agents: [
-    { id: "scout_1", role: "Scout", status: "completed", task: "Map health architecture", detail: "Source-linked seed architecture", branch: "hive/recorded/scout-1", duration: "00:18" },
-    { id: "builder_1", role: "Builder", status: "completed", task: "Implement health details", detail: "Recorded diff changes 3 files", branch: "hive/recorded/builder-1", duration: "00:42" },
-    { id: "tester_1", role: "Tester", status: "completed", task: "Add degraded-state proof", detail: "Added 2 focused tests", branch: "hive/recorded/tester-1", duration: "00:21" },
-    { id: "reviewer_1", role: "Reviewer", status: "completed", task: "Review recorded diff", detail: "Protected paths unchanged", duration: "00:09" }
+export const replayMemory: MemoryCapsule = {
+  id: "mem_pytest_importlib_v1",
+  slug: "fix-pytest-module-collisions",
+  title: "Fix duplicate pytest module collisions",
+  summary: "Use pytest importlib mode when duplicate test module names collide.",
+  problem: "Pytest raises import file mismatch during collection.",
+  triggers: ["import file mismatch", "duplicate test module", "test_runner.py collision"],
+  steps: [
+    "Confirm the collision is caused by duplicate test module basenames.",
+    "Set pytest addopts to --import-mode=importlib.",
+    "Run the full suite and preserve the output as evidence.",
   ],
-  patches: [
-    { id: "kp_018", type: "repository_fact", status: "source_linked", author: "scout_1", summary: "Health checks already flow through createHealthService.", evidence: "src/services/health.js:1–4 · baseline ec4889b", deliveredTo: ["builder_1", "tester_1", "reviewer_1"], consumedBy: [{ agent: "builder_1", effect: "Recorded diff extends the existing service.", changedFiles: ["src/server.js", "src/services/health.js"] }] },
-    { id: "kp_021", type: "test_result", status: "execution_verified", author: "tester_1", summary: "Degraded database state is sanitized.", evidence: "demo/replay-evidence/verification.log · exit 0", deliveredTo: ["reviewer_1"], consumedBy: [] },
-    { id: "kp_024", type: "constraint", status: "execution_verified", author: "reviewer_1", summary: "Recorded coordinator diff leaves protected paths unchanged.", evidence: "demo/replay-evidence/integrated.diff", deliveredTo: ["builder_1"], consumedBy: [] }
-  ],
-  diff: "warning: in the working copy of 'src/server.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'src/services/health.js', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/health.test.js', LF will be replaced by CRLF the next time Git touches it\ndiff --git a/src/server.js b/src/server.js\nindex f734795..21de9fd 100644\n--- a/src/server.js\n+++ b/src/server.js\n@@ -1,12 +1,14 @@\n import http from \"node:http\";\n-import { HealthService } from \"./services/health.js\";\n-const health = new HealthService();\n-const server = http.createServer(async (request, response) => {\n-  if (request.url === \"/health\") {\n-    response.writeHead(200, { \"content-type\": \"application/json\" });\n-    response.end(JSON.stringify(await health.basic()));\n-    return;\n+import { createHealthService } from \"./services/health.js\";\n+const health = createHealthService();\n+export const server = http.createServer(async (req, res) => {\n+  res.setHeader(\"content-type\", \"application/json\");\n+  if (req.url === \"/health\") return res.end(JSON.stringify(health.basic()));\n+  if (req.url === \"/health/details\") {\n+    const details = await health.details();\n+    res.statusCode = details.database === \"degraded\" ? 503 : 200;\n+    return res.end(JSON.stringify(details));\n   }\n-  response.writeHead(404).end();\n+  res.statusCode = 404; res.end(JSON.stringify({ error: \"not_found\" }));\n });\n-server.listen(Number(process.env.PORT ?? 4100), \"127.0.0.1\");\n+if (process.env.NODE_ENV !== \"test\") server.listen(3030);\ndiff --git a/src/services/health.js b/src/services/health.js\nindex 644c11c..dbcf17c 100644\n--- a/src/services/health.js\n+++ b/src/services/health.js\n@@ -1,4 +1,14 @@\n-export class HealthService {\n-  constructor(database = { ping: async () => true }) { this.database = database; }\n-  async basic() { return { status: (await this.database.ping()) ? \"ok\" : \"degraded\" }; }\n-}\n+import { applicationVersion } from \"../config/version.js\";\n+\n+const startedAt = Date.now();\n+export const createHealthService = (database = { ping: async () => true }) => ({\n+  basic: () => ({ status: \"ok\" }),\n+  details: async () => {\n+    try {\n+      await database.ping();\n+      return { version: applicationVersion, uptime_seconds: Math.floor((Date.now() - startedAt) / 1000), database: \"ok\" };\n+    } catch {\n+      return { version: applicationVersion, uptime_seconds: Math.floor((Date.now() - startedAt) / 1000), database: \"degraded\" };\n+    }\n+  }\n+});\ndiff --git a/test/health.test.js b/test/health.test.js\nindex e4508a7..cf05a69 100644\n--- a/test/health.test.js\n+++ b/test/health.test.js\n@@ -1,7 +1,20 @@\n import test from \"node:test\";\n import assert from \"node:assert/strict\";\n-import { HealthService } from \"../src/services/health.js\";\n+import { createHealthService } from \"../src/services/health.js\";\n \n-test(\"existing basic health reports ok\", async () => {\n-  assert.deepEqual(await new HealthService().basic(), { status: \"ok\" });\n+test(\"existing basic health reports ok\", () => {\n+  assert.deepEqual(createHealthService().basic(), { status: \"ok\" });\n+});\n+\n+test(\"detailed health reports version, uptime, and healthy database\", async () => {\n+  const result = await createHealthService().details();\n+  assert.equal(result.version, \"1.4.0\");\n+  assert.equal(result.database, \"ok\");\n+  assert.equal(typeof result.uptime_seconds, \"number\");\n+});\n+\n+test(\"database failures are degraded without leaking the raw error\", async () => {\n+  const result = await createHealthService({ ping: async () => { throw new Error(\"postgres password=secret\"); } }).details();\n+  assert.equal(result.database, \"degraded\");\n+  assert.equal(\"error\" in result, false);\n });\n",
-  verification: { executable: "npm", args: ["test"], workingDirectory: "<recorded-worktree>", exitCode: 0, duration: "408ms", output: "> test\n> node --test\n\nTAP version 13\n# Subtest: existing basic health reports ok\nok 1 - existing basic health reports ok\n  ---\n  duration_ms: 1.3321\n  ...\n# Subtest: detailed health reports version, uptime, and healthy database\nok 2 - detailed health reports version, uptime, and healthy database\n  ---\n  duration_ms: 0.3014\n  ...\n# Subtest: database failures are degraded without leaking the raw error\nok 3 - database failures are degraded without leaking the raw error\n  ---\n  duration_ms: 0.2292\n  ...\n1..3\n# tests 3\n# suites 0\n# pass 3\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 408.8938", coordinatorObserved: true },
-  review: ["Recorded diff changes only src/server.js, src/services/health.js, and test/health.test.js", "Raw failure text is not returned", "Protected paths unchanged", "Evidence manifest: demo/replay-evidence/manifest.json"],
-  protectedPathsUnchanged: true
+  tags: ["python", "pytest", "debugging", "codex"],
+  author: { id: "dev_alice", display_name: "Alice Chen" },
+  version: "1.0.0",
+  compatibility: ["python>=3.11", "pytest>=8"],
+  status: "verified",
+  verification: {
+    command: ["pytest", "-q"],
+    exit_code: 0,
+    passed: 4,
+    evidence_excerpt: "4 passed",
+  },
+  stars: 128,
+  installs: 1402,
+  fork_of: null,
+  created_at: "2026-07-18T10:00:00Z",
+};
+
+export const replayInstallManifest: InstallManifest = {
+  memory_id: "mem_pytest_importlib_v1",
+  slug: "fix-pytest-module-collisions",
+  version: "1.0.0",
+  install_path: ".pluribus/installed/fix-pytest-module-collisions/MEMORY.md",
+  content_sha256: "sha256:recorded-demo-memory-package",
+  installed_at: "2026-07-18T10:05:00Z",
+};
+
+export const replayReceipt: UsageReceipt = {
+  id: "use_demo_001",
+  memory_id: "mem_pytest_importlib_v1",
+  consumer: "dev_bob",
+  matched_trigger: "import file mismatch",
+  injected_into_codex: true,
+  codex_reported_use: true,
+  effect: "Configured pytest importlib collection mode.",
+  changed_files: ["pyproject.toml"],
+  verification: {
+    command: ["pytest", "-q"],
+    exit_code: 0,
+    output_excerpt: "4 passed",
+  },
+  created_at: "2026-07-18T10:08:00Z",
+};
+
+export const replaySnapshot: DemoSnapshot = {
+  featured_memories: [replayMemory],
+  installed_memories: [],
+  latest_receipt: replayReceipt,
+  stats: {
+    published: 1,
+    verified: 1,
+    installs: 1402,
+    successful_uses: 1,
+  },
 };
 
 export const replayMetadata = {
-  evidenceBundle: "demo/replay-evidence",
-  coordinatorEvidence: "recorded local run",
-  agentTimeline: "deterministic demonstration narrative"
+  label: "REPLAY — RECORDED EVIDENCE",
+  source: "sanitized deterministic fixture",
+  live: false,
 } as const;

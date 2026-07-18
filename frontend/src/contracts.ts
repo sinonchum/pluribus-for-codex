@@ -1,57 +1,76 @@
 export type ExecutionMode = "live" | "replay";
-export type MissionStatus = "created" | "running" | "verified" | "partially_verified" | "failed" | "requires_human_review" | "stopped";
-export type AgentStatus = "queued" | "running" | "completed" | "failed" | "timed_out";
+export type MemoryStatus = "verified" | "unverified";
 
-export interface AgentRecord {
+export interface Author {
   id: string;
-  role: "Scout" | "Builder" | "Tester" | "Reviewer";
-  task: string;
-  status: AgentStatus;
-  branch?: string;
-  duration: string;
-  detail: string;
+  display_name: string;
 }
 
-export interface KnowledgePatch {
+export interface MemoryVerification {
+  command: string[];
+  exit_code: number;
+  passed: number;
+  evidence_excerpt: string;
+}
+
+export interface MemoryCapsule {
   id: string;
-  author: string;
-  type: "repository_fact" | "constraint" | "test_result" | "risk";
-  status: "proposed" | "source_linked" | "execution_verified" | "disputed";
+  slug: string;
+  title: string;
   summary: string;
-  evidence: string;
-  deliveredTo: string[];
-  consumedBy: Array<{ agent: string; effect: string; changedFiles: string[] }>;
+  problem: string;
+  triggers: string[];
+  steps: string[];
+  tags: string[];
+  author: Author;
+  version: string;
+  compatibility: string[];
+  status: MemoryStatus;
+  verification: MemoryVerification;
+  stars: number;
+  installs: number;
+  fork_of: string | null;
+  created_at: string;
 }
 
-export interface VerificationRecord {
-  executable: string;
-  args: string[];
-  workingDirectory: string;
-  exitCode: number;
-  duration: string;
-  output: string;
-  coordinatorObserved: true;
+export interface InstallManifest {
+  memory_id: string;
+  slug: string;
+  version: string;
+  install_path: string;
+  content_sha256: string;
+  installed_at: string;
 }
 
-export interface MissionSnapshot {
+export interface UsageReceiptVerification {
+  command: string[];
+  exit_code: number;
+  output_excerpt: string;
+}
+
+export interface UsageReceipt {
   id: string;
-  objective: string;
-  repository: string;
-  baseline: string;
-  integrationBranch: string;
-  status: MissionStatus;
-  startedAt: string;
-  agents: AgentRecord[];
-  patches: KnowledgePatch[];
-  stages: Array<{ label: string; state: "pending" | "active" | "done" | "failed" }>;
-  diff: string;
-  verification: VerificationRecord;
-  review: string[];
-  protectedPathsUnchanged: boolean;
+  memory_id: string;
+  consumer: string;
+  matched_trigger: string;
+  injected_into_codex: boolean;
+  codex_reported_use: boolean;
+  effect: string;
+  changed_files: string[];
+  verification: UsageReceiptVerification;
+  created_at: string;
 }
 
-export interface MissionEvent {
-  id: number;
-  type: string;
-  payload: Partial<MissionSnapshot>;
+export interface DemoStats {
+  published: number;
+  verified: number;
+  installs: number;
+  successful_uses: number;
+}
+
+export interface DemoSnapshot {
+  featured_memories: MemoryCapsule[];
+  installed_memories: InstallManifest[];
+  latest_receipt: UsageReceipt | null;
+  stats: DemoStats;
 }
