@@ -15,7 +15,7 @@
 1. **Explore:** search `billing`; open **Preserve billing audit trail during invoice transitions**.
 2. **Inspect:** show Alice's tenure, implicit team rule, matching triggers, reusable judgment, and `3 passed` publisher evidence.
 3. **Install:** install the reviewed handoff to Bob's Codex.
-4. **Terminal:** run the real Codex CLI handoff command.
+4. **Terminal:** launch normal interactive Codex; the Pluribus `UserPromptSubmit` hook matches Alice's Memory on Bob's action.
 5. **Receipt:** show Alice → Memory → Bob → `billing/invoices.py` → `uv run pytest -q` → `3 passed`.
 
 ## Start Live mode
@@ -38,7 +38,37 @@ Open:
 http://127.0.0.1:5177/?mode=live
 ```
 
-## Run real Codex and publish its receipt
+## Run interactive Codex with per-action Memory injection
+
+From the repository root:
+
+```bash
+env -u VIRTUAL_ENV uv run --project backend \
+  python demo/start-handoff-codex.py
+```
+
+In the Codex TUI, enter:
+
+```text
+Fix the failing tests by implementing cancel an invoice support. Before editing,
+state the exact Pluribus Memory ID and matched trigger injected for this action.
+Then implement the fix and run uv run pytest -q.
+```
+
+Expected visible evidence:
+
+```text
+hook: UserPromptSubmit
+hook: UserPromptSubmit Completed
+Pluribus Memory ID: mem_billing_audit_handoff_v1
+Matched trigger: cancel an invoice
+3 passed
+```
+
+Then ask `上个 action 使用了什么 Pluribus memory？`; Codex should repeat the exact
+Memory ID and trigger from the previous turn.
+
+## Automated Codex run and Live Receipt
 
 From the repository root:
 
@@ -67,7 +97,7 @@ Reload Live UI, install/open the Handoff Memory if needed, then choose **Usage R
 1. **Problem (30 sec):** “When Alice leaves, Git keeps her code but loses why direct billing state changes are dangerous.”
 2. **Publish (45 sec):** “Pluribus extracts locally, removes secrets, and asks Alice to approve a structured handoff—not a transcript.”
 3. **Discover/install (45 sec):** “Bob finds the rule by task intent and installs it as an explicit local package.”
-4. **Real Codex (90 sec):** run the command; point out the failing baseline, explicit Memory ID, one-file delta, and passing tests.
+4. **Real Codex (90 sec):** launch interactive Codex; point out `UserPromptSubmit`, the explicit Memory ID, one-file delta, passing tests, and the successful follow-up recall.
 5. **Receipt (60 sec):** “This is causal proof that Alice's knowledge reached Bob's Codex and preserved the audit trail.”
 6. **Close (30 sec):** “Pluribus is continuity infrastructure for engineering teams.”
 
