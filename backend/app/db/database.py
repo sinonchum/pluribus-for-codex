@@ -199,6 +199,133 @@ class Database:
             ).fetchall()
         return [self._event_from_row(row) for row in rows]
 
+    def append_event(
+        self,
+        *,
+        mission_id: str,
+        event_type: str,
+        payload: dict[str, Any],
+        created_at: str,
+        agent_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Persist an orchestration event and return the stored event."""
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO events (
+                  mission_id, agent_id, event_type, payload_json, created_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    mission_id,
+                    agent_id,
+                    event_type,
+                    json.dumps(payload),
+                    created_at,
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM events WHERE id = ?", (cursor.lastrowid,)
+            ).fetchone()
+        if row is None:  # pragma: no cover - defensive invariant
+            raise RuntimeError("event disappeared after insertion")
+        return self._event_from_row(row)
+
+    def transition_mission(
+        self,
+        *,
+        mission_id: str,
+        expected_statuses: set[str],
+        new_status: str,
+        event_type: str,
+        payload: dict[str, Any],
+        created_at: str,
+        completed_at: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Atomically change mission state and append its lifecycle event."""
+        if not expected_statuses:
+            raise ValueError("expected_statuses must not be empty")
+        placeholders = ",".join("?" for _ in expected_statuses)
+        with self.connect() as connection:
+            cursor = connection.execute(
+                f"""
+                UPDATE missions
+                SET status = ?, completed_at = COALESCE(?, completed_at)
+                WHERE id = ? AND status IN ({placeholders})
+                """,
+                (
+                    new_status,
+                    completed_at,
+                    mission_id,
+                    *sorted(expected_statuses),
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+            self._insert_event(
+                connection,
+                mission_id=mission_id,
+                event_type=event_type,
+                payload=payload,
+                created_at=created_at,
+            )
+        return self.get_mission(mission_id)
+
+    def update_agent(
+        self,
+        *,
+        mission_id: str,
+        agent_id: str,
+        status: str,
+        created_at: str,
+        worktree_path: str | None = None,
+        branch_name: str | None = None,
+        process_id: int | None = None,
+        started_at: str | None = None,
+        completed_at: str | None = None,
+        exit_code: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Update an agent and append the lifecycle event in one transaction."""
+        with self.connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE agents SET
+                  status = ?, worktree_path = COALESCE(?, worktree_path),
+                  branch_name = COALESCE(?, branch_name),
+                  process_id = COALESCE(?, process_id),
+                  started_at = COALESCE(?, started_at),
+                  completed_at = COALESCE(?, completed_at),
+                  exit_code = COALESCE(?, exit_code)
+                WHERE mission_id = ? AND id = ?
+                """,
+                (
+                    status,
+                    worktree_path,
+                    branch_name,
+                    process_id,
+                    started_at,
+                    completed_at,
+                    exit_code,
+                    mission_id,
+                    agent_id,
+                ),
+            )
+            if cursor.rowcount == 0:
+                return None
+            self._insert_event(
+                connection,
+                mission_id=mission_id,
+                agent_id=agent_id,
+                event_type=f"agent.{status}",
+                payload={"agent_id": agent_id, "status": status},
+                created_at=created_at,
+            )
+            row = connection.execute(
+                "SELECT * FROM agents WHERE mission_id = ? AND id = ?",
+                (mission_id, agent_id),
+            ).fetchone()
+        return dict(row) if row else None
+
     def stop_mission(self, mission_id: str, completed_at: str) -> dict[str, Any] | None:
         with self.connect() as connection:
             cursor = connection.execute(
