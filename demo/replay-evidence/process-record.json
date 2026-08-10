@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "npm",
+    "test"
+  ],
+  "cwd": "<recorded-worktree>",
+  "exit_code": 0,
+  "stdout_file": "verification.log",
+  "stderr": "",
+  "coordinator_observed": true
+}
